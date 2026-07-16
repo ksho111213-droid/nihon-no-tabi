@@ -55,6 +55,7 @@ const LANG_ZH = {
     importDone: "已导入{n}个景点。",
     exportFilename: "日本之旅-心愿清单.json",
     photoCredit: "照片: {a} ({l}) / {s}",
+    feedbackLink: "📝 意见反馈",
     footerText: "从全部47个都道府县精选{n}个景点与示范行程的旅行指南。照片来自 Wikimedia Commons,每张照片均标注了出处。本站使用 Google Analytics 统计访问情况。",
     ariaClose: "关闭",
     ariaStar: "将{name}加入或移出心愿清单",

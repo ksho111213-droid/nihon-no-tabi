@@ -1167,3 +1167,18 @@ button { font-family: var(--sans); }
   color: #fff;
   font-weight: bold;
 }
+
+/* ---- フッターのフィードバックリンク ---- */
+.footer-feedback { margin: 0 0 var(--sp-3); }
+.footer-feedback a {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  transition: border-color 0.2s ease-out, color 0.2s ease-out;
+}
+.footer-feedback a:hover { border-color: var(--accent); color: var(--accent); }
+.footer-feedback a[hidden] { display: none; }

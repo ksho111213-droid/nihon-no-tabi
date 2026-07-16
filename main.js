@@ -2,6 +2,8 @@
 // 状態はグローバル変数で持ち、URLハッシュで表示(ビュー/詳細)を切り替える。
 const REGIONS = ["北海道", "東北", "関東", "中部", "近畿", "中国", "四国", "九州・沖縄"];
 const CATEGORIES = ["絶景", "温泉", "グルメ", "歴史", "自然", "街歩き"];
+// ご意見・感想の Google フォームURL。空文字の間はフッターのリンクを出さない
+const FEEDBACK_URL = "";
 const WISHLIST_KEY = "travel-spots-wishlist-v2";
 const OLD_WISHLIST_KEY = "travel-spots-wishlist";
 
@@ -75,6 +77,7 @@ const JA_UI = {
   importDone: "{n}件を読み込みました。",
   exportFilename: "日本の旅-行きたいリスト.json",
   photoCredit: "写真: {a} ({l}) / {s}",
+  feedbackLink: "📝 ご意見・感想はこちら",
   footerText: "全47都道府県から選んだ{n}件のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。アクセス状況の把握に Google Analytics を使用しています。",
   ariaClose: "閉じる",
   ariaStar: "{name}を行きたいリストに追加/削除",
@@ -834,6 +837,7 @@ dialogStar.addEventListener("click", () => {
   refreshDialogButtons();
   cardsStale = true;
 });
+document.getElementById("feedback-link").addEventListener("click", () => track("feedback_click"));
 document.getElementById("dialog-hotel").addEventListener("click", () => {
   const spot = spotById[dialogSpotId];
   if (spot) track("hotel_search_click", { spot_name: spot.name }); // 収益導線のクリック計測
@@ -1265,6 +1269,10 @@ function applyStaticTexts() {
   document.getElementById("nearby-heading").textContent = t("nearbyHeading");
   document.getElementById("courses-heading").textContent = t("inCoursesHeading");
   document.querySelector(".site-footer p:last-child").textContent = t("footerText", { n: SPOTS.length });
+  const feedbackLink = document.getElementById("feedback-link");
+  feedbackLink.hidden = !FEEDBACK_URL;
+  feedbackLink.href = FEEDBACK_URL;
+  feedbackLink.textContent = t("feedbackLink");
 }
 
 function setLang(lang) {
