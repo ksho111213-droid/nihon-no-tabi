@@ -41,7 +41,7 @@ const LANG_KO = {
     importNone: "유효한 명소를 찾지 못했습니다.",
     importDone: "{n}곳을 가져왔습니다.",
     exportFilename: "일본의여행-위시리스트.json",
-    photoCredit: "사진: {a} ({l}) / Wikimedia Commons",
+    photoCredit: "사진: {a} ({l}) / {s}",
     footerText: "47개 도도부현 전체에서 엄선한 {n}곳의 명소와 추천 일정 가이드. 사진은 Wikimedia Commons의 것을 사용하며, 각 사진에 출처를 표기합니다.",
     ariaClose: "닫기",
     ariaStar: "{name}을(를) 위시리스트에 추가/삭제",

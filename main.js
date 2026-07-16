@@ -61,7 +61,7 @@ const JA_UI = {
   importNone: "有効なスポットが見つかりませんでした。",
   importDone: "{n}件を読み込みました。",
   exportFilename: "日本の旅-行きたいリスト.json",
-  photoCredit: "写真: {a} ({l}) / Wikimedia Commons",
+  photoCredit: "写真: {a} ({l}) / {s}",
   footerText: "全47都道府県から選んだ{n}件のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。",
   ariaClose: "閉じる",
   ariaStar: "{name}を行きたいリストに追加/削除",
@@ -184,6 +184,53 @@ function photoUrl(spot, width) {
 function photoPageUrl(spot) {
   return "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(spot.photo.file);
 }
+// ライセンス表記(例 "CC BY-SA 4.0" / "CC0" / "Public domain")を条文ページのURLへ。
+// 未知の表記は null を返し、呼び出し側でリンクせず素のテキストにフォールバックする。
+function licenseUrl(license) {
+  if (license === "CC0") return "https://creativecommons.org/publicdomain/zero/1.0/";
+  if (license === "Public domain") return "https://creativecommons.org/publicdomain/mark/1.0/";
+  const m = license.match(/^CC (BY(?:-SA)?) ([\d.]+)( \w+)?$/);
+  if (!m) return null;
+  const type = m[1].toLowerCase();               // "by" / "by-sa"
+  const port = m[3] ? m[3].trim() + "/" : "";    // ポート版(例 "jp/")
+  return "https://creativecommons.org/licenses/" + type + "/" + m[2] + "/" + port;
+}
+// 写真クレジットを組み立てて <span> で返す。ローカライズ済みテンプレートを
+// {a}=作者 / {l}=ライセンス条文リンク / {s}=出典(Wikimedia Commons)リンク に展開する。
+// HTML はリンクの入れ子ができないため、要素ごとに分けて組む。
+function buildCredit(spot) {
+  const span = document.createElement("span");
+  const tmpl = t("photoCredit", { a: "\x00a\x00", l: "\x00l\x00", s: "\x00s\x00" });
+  tmpl.split(/\x00([als])\x00/).forEach((part, i) => {
+    if (i % 2 === 0) {
+      if (part) span.appendChild(document.createTextNode(part));
+      return;
+    }
+    if (part === "a") {
+      span.appendChild(document.createTextNode(spot.photo.author));
+    } else if (part === "l") {
+      const url = licenseUrl(spot.photo.license);
+      if (url) {
+        span.appendChild(creditLink(url, spot.photo.license));
+      } else {
+        span.appendChild(document.createTextNode(spot.photo.license));
+      }
+    } else if (part === "s") {
+      span.appendChild(creditLink(photoPageUrl(spot), "Wikimedia Commons"));
+    }
+  });
+  return span;
+}
+// クレジット内リンク。カード内で押してもスポットモーダルが開かないよう伝播を止める。
+function creditLink(href, text) {
+  const a = document.createElement("a");
+  a.href = href;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = text;
+  a.addEventListener("click", (e) => e.stopPropagation());
+  return a;
+}
 function mapUrl(spot) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(spot.mapQuery);
 }
@@ -220,15 +267,8 @@ function fillPhotoBox(container, spot, width) {
       container.prepend(placeholder);
     });
     container.prepend(img);
-    const credit = document.createElement("span");
+    const credit = buildCredit(spot);
     credit.className = "photo-credit";
-    const link = document.createElement("a");
-    link.href = photoPageUrl(spot);
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.textContent = t("photoCredit", { a: spot.photo.author, l: spot.photo.license });
-    link.addEventListener("click", (e) => e.stopPropagation());
-    credit.appendChild(link);
     container.appendChild(credit);
   } else {
     container.prepend(placeholder);
@@ -879,8 +919,7 @@ function showHeroSlide(index, initial) {
   pref.textContent = prefLabel(spot.prefecture);
   heroCaptionEl.appendChild(name);
   heroCaptionEl.appendChild(pref);
-  heroCreditEl.href = photoPageUrl(spot);
-  heroCreditEl.textContent = t("photoCredit", { a: spot.photo.author, l: spot.photo.license });
+  heroCreditEl.replaceChildren(...buildCredit(spot).childNodes);
   // 時間差表示: 写真のフェードよりワンテンポ遅れてキャプションが入れ替わる
   // (初回ロード時はCSSのカスケード演出に任せる)
   if (!initial && !reducedMotion.matches) {

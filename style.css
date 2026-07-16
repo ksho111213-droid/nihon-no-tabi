@@ -155,7 +155,8 @@ button { font-family: var(--sans); }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.hero-credit:hover { color: rgba(255, 255, 255, 0.95); text-decoration: underline; }
+.hero-credit a { color: inherit; text-decoration: none; }
+.hero-credit a:hover { color: rgba(255, 255, 255, 0.95); text-decoration: underline; }
 
 /* 表示中の写真のスポット名(クリックで詳細へ) */
 .hero-caption {

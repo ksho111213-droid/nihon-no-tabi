@@ -42,7 +42,7 @@ const LANG_EN = {
     importNone: "No valid spots found.",
     importDone: "Imported {n} spots.",
     exportFilename: "japan-travel-wishlist.json",
-    photoCredit: "Photo: {a} ({l}) / Wikimedia Commons",
+    photoCredit: "Photo: {a} ({l}) / {s}",
     footerText: "A guide to {n} hand-picked spots and model itineraries across all 47 prefectures of Japan. Photos are from Wikimedia Commons, credited on each image.",
     ariaClose: "Close",
     ariaStar: "Add or remove {name} from wishlist",
