@@ -4,6 +4,7 @@ const COURSES = [
     id: "kanazawa-hida-2n3d",
     title: "金沢・白川郷・飛騨高山 2泊3日",
     area: "中部", days: 3,
+    budget: { hotelPerNight: [9000, 18000], foodPerDay: [5000, 9000], tickets: 2000 },  // 現地費用の目安(交通費除く)
     summary: "北陸新幹線で金沢入りし、世界遺産の合掌集落を経て飛騨の城下町へ。加賀百万石の文化と山里の原風景を一度に味わう王道ルート。",
     itinerary: [
       { day: 1, steps: [
@@ -23,6 +24,7 @@ const COURSES = [
     id: "kyoto-nara-2n3d",
     title: "京都・奈良 王道めぐり 2泊3日",
     area: "近畿", days: 3,
+    budget: { hotelPerNight: [10000, 20000], foodPerDay: [4500, 9000], tickets: 2000 },  // 現地費用の目安(交通費除く)
     summary: "千本鳥居に金閣、嵐山の竹林、そして奈良の大仏と鹿。初めての関西旅行ならまずこのコース。どの季節でも外さない。",
     itinerary: [
       { day: 1, steps: [
@@ -41,6 +43,7 @@ const COURSES = [
     id: "hokkaido-2n3d",
     title: "札幌・小樽・登別 2泊3日",
     area: "北海道", days: 3,
+    budget: { hotelPerNight: [9000, 18000], foodPerDay: [5000, 10000], tickets: 1500 },  // 現地費用の目安(交通費除く)
     summary: "海鮮とレトロな港町、そして地獄谷の名湯。初めての北海道を凝縮した定番コース。冬は雪景色、夏は爽やかな気候が待っている。",
     itinerary: [
       { day: 1, steps: [
@@ -58,6 +61,7 @@ const COURSES = [
     id: "setouchi-2n3d",
     title: "広島・しまなみ・道後 2泊3日",
     area: "中国・四国", days: 3,
+    budget: { hotelPerNight: [9000, 16000], foodPerDay: [4500, 8000], tickets: 3500 },  // 現地費用の目安(交通費除く)
     summary: "宮島の大鳥居から尾道の坂道、島々を渡るサイクリング、そして日本最古級の湯へ。瀬戸内の光と多島美を浴びる3日間。",
     itinerary: [
       { day: 1, steps: [
@@ -77,6 +81,7 @@ const COURSES = [
     id: "kyushu-onsen-2n3d",
     title: "九州 温泉と大自然 2泊3日",
     area: "九州・沖縄", days: 3,
+    budget: { hotelPerNight: [10000, 20000], foodPerDay: [4500, 8500], tickets: 3000 },  // 現地費用の目安(交通費除く)
     summary: "別府の地獄、由布院の朝霧、黒川の露天、阿蘇の大草原、高千穂の神話峡谷。九州の「湯と火の国」を縦断する濃厚ルート。",
     itinerary: [
       { day: 1, steps: [
@@ -96,6 +101,7 @@ const COURSES = [
     id: "tohoku-2n3d",
     title: "みちのく情緒 2泊3日",
     area: "東北", days: 3,
+    budget: { hotelPerNight: [9000, 17000], foodPerDay: [4000, 8000], tickets: 2000 },  // 現地費用の目安(交通費除く)
     summary: "日本三景の松島、山寺の石段、大正ロマンの銀山温泉、武家屋敷の角館。新幹線でめぐる、しっとりと美しい東北の旅。",
     itinerary: [
       { day: 1, steps: [
@@ -114,6 +120,7 @@ const COURSES = [
     id: "fuji-hakone-1n2d",
     title: "富士山ぐるり 1泊2日",
     area: "中部・関東", days: 2,
+    budget: { hotelPerNight: [10000, 20000], foodPerDay: [4500, 9000], tickets: 3500 },  // 現地費用の目安(交通費除く)
     summary: "河口湖の逆さ富士、忍野の湧水、芦ノ湖の海賊船、熱海の湯。週末にさっと行ける、富士山を全方位から愛でる小旅行。",
     itinerary: [
       { day: 1, steps: [
@@ -130,6 +137,7 @@ const COURSES = [
     id: "okinawa-3n4d",
     title: "沖縄 本島と八重山 3泊4日",
     area: "九州・沖縄", days: 4,
+    budget: { hotelPerNight: [8000, 18000], foodPerDay: [4500, 9000], tickets: 5000 },  // 現地費用の目安(交通費除く)
     summary: "ジンベエザメに会い、古宇利ブルーの海を渡り、飛行機で八重山へ。赤瓦の集落と遠浅の海で何もしない贅沢を味わう島旅。",
     itinerary: [
       { day: 1, steps: [
@@ -150,6 +158,7 @@ const COURSES = [
     id: "sanin-2n3d",
     title: "山陰 出雲・松江・鳥取 2泊3日",
     area: "中国", days: 3,
+    budget: { hotelPerNight: [9000, 17000], foodPerDay: [4000, 8000], tickets: 2000 },  // 現地費用の目安(交通費除く)
     summary: "縁結びの出雲大社から国宝松江城、美肌の玉造温泉とラドンの三朝温泉をはしごして、最後は鳥取砂丘へ。神話と名湯の山陰路。",
     itinerary: [
       { day: 1, steps: [
@@ -170,6 +179,7 @@ const COURSES = [
     id: "hokuriku-2n3d",
     title: "北陸ぐるり 金沢・能登・福井 2泊3日",
     area: "中部", days: 3,
+    budget: { hotelPerNight: [9000, 17000], foodPerDay: [5000, 9500], tickets: 2500 },  // 現地費用の目安(交通費除く)
     summary: "近江町市場の海鮮とひがし茶屋街、砂浜を走る千里浜、海の温泉・和倉。締めは永平寺の静寂と東尋坊の断崖。北陸の名所を一筆書きでめぐる。",
     itinerary: [
       { day: 1, steps: [
@@ -190,6 +200,7 @@ const COURSES = [
     id: "shikoku-3n4d",
     title: "四国ぐるり周遊 3泊4日",
     area: "四国", days: 4,
+    budget: { hotelPerNight: [8000, 15000], foodPerDay: [4000, 8000], tickets: 3500 },  // 現地費用の目安(交通費除く)
     summary: "こんぴら参りに鳴門の渦潮、祖谷の秘境、道後の湯。うどんもカツオも阿波おどりも、四国のいいとこ取りをぐるり一周。",
     itinerary: [
       { day: 1, steps: [
@@ -214,6 +225,7 @@ const COURSES = [
     id: "furano-biei-1n2d",
     title: "旭川・美瑛・富良野 1泊2日",
     area: "北海道", days: 2,
+    budget: { hotelPerNight: [9000, 16000], foodPerDay: [4000, 8000], tickets: 1500 },  // 現地費用の目安(交通費除く)
     summary: "行動展示の旭山動物園から、青い池とラベンダー畑へ。夏の北海道のハイライトを凝縮した週末旅。レンタカーがおすすめ。",
     itinerary: [
       { day: 1, steps: [
@@ -229,6 +241,7 @@ const COURSES = [
     id: "minami-kyushu-2n3d",
     title: "南九州 桜島・指宿・霧島・日南 2泊3日",
     area: "九州・沖縄", days: 3,
+    budget: { hotelPerNight: [9000, 17000], foodPerDay: [4500, 8500], tickets: 3000 },  // 現地費用の目安(交通費除く)
     summary: "噴煙を上げる桜島、砂に埋まる指宿、神話の霧島神宮から日南海岸の鵜戸神宮へ。火山と神話と温泉、九州の南端をめぐる旅。",
     itinerary: [
       { day: 1, steps: [

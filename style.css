@@ -1075,3 +1075,95 @@ button { font-family: var(--sans); }
   color: var(--ink);
 }
 .site-footer p { margin: 0 auto; max-width: 42em; text-wrap: pretty; }
+
+/* ---- 宿検索リンク(スポット詳細) ---- */
+.dialog-actions .hotel-link {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: var(--text-base);
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.2s ease-out;
+}
+.dialog-actions .hotel-link:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---- シェア行(スポット詳細・コース詳細) ---- */
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  margin: var(--sp-3) 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+.share-btn {
+  padding: 4px 12px;
+  font-size: var(--text-sm);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease-out;
+}
+.share-btn:hover { border-color: var(--ink-soft); }
+
+/* ---- 入場料の免責・費用目安 ---- */
+.fee-disclaimer {
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-3);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.course-budget {
+  margin: var(--sp-2) 0 0;
+  font-weight: bold;
+  color: var(--ink);
+}
+.course-card .course-budget { font-size: var(--text-sm); font-weight: normal; color: var(--ink-soft); }
+.course-budget-note {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+/* ---- 朱印帳(制覇サマリー) ---- */
+.wishlist-tools button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-pale); }
+.stampbook {
+  margin: var(--sp-3) 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.stampbook[hidden] { display: none; }
+.stampbook-title { margin: 0 0 var(--sp-2); font-weight: bold; color: var(--ink); }
+.stampbook-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+  margin-bottom: var(--sp-1);
+}
+.stampbook-region {
+  flex: 0 0 72px;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.stampbook-pref {
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+.stampbook-pref.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: bold;
+}

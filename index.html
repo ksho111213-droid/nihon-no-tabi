@@ -35,6 +35,14 @@
 }
 </script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗾</text></svg>">
+<!-- Google Analytics 4。page_view はハッシュルーティングに合わせて main.js から送るため自動送信は切る -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-XXXXXXXXXX', { send_page_view: false });
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
@@ -88,11 +96,13 @@
         <option value="added">追加順</option>
         <option value="region">地方順</option>
       </select>
+      <button id="visited-only">訪 訪問済みのみ</button>
       <button id="export-btn">書き出し</button>
       <button id="import-btn">読み込み</button>
       <input type="file" id="import-file" accept="application/json" hidden>
     </div>
   </div>
+  <div class="stampbook" id="stampbook" hidden></div>
   <p id="result-count"></p>
 </div>
 
@@ -114,11 +124,14 @@
     <div class="tags" id="dialog-tags"></div>
     <p class="dialog-desc" id="dialog-desc"></p>
     <dl class="info-grid" id="dialog-info"></dl>
+    <p class="fee-disclaimer" id="fee-disclaimer" hidden></p>
     <div class="dialog-actions">
       <a class="map-link" id="dialog-map" target="_blank" rel="noopener">地図を見る →</a>
+      <a class="hotel-link" id="dialog-hotel" target="_blank" rel="noopener sponsored"></a>
       <button id="dialog-star"></button>
       <button id="dialog-visited"></button>
     </div>
+    <div id="dialog-share"></div>
     <label class="memo-label" for="memo-input">わたしのメモ</label>
     <textarea id="memo-input" placeholder="気になること、食べたいもの、泊まりたい宿…"></textarea>
     <p class="sub-heading" id="nearby-heading" hidden>あわせて行きたい</p>

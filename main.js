@@ -45,6 +45,19 @@ const JA_UI = {
   stayTimeLabel: "滞在目安",
   accessLabel: "アクセス",
   mapLink: "地図を見る →",
+  hotelSearch: "🏨 この辺りの宿を探す",
+  shareLabel: "共有:",
+  copyUrl: "URLをコピー",
+  copied: "✓ コピーしました",
+  visitedOnlyBtn: "訪 訪問済みのみ",
+  stampbookTitle: "朱印帳 — 訪問 {n}件・{m}/47都道府県",
+  feeLabel: "入場料(目安)",
+  feeFree: "無料",
+  feeAbout: "約¥{n}",
+  feeRange: "¥{a}〜{b}",
+  feeDisclaimer: "※ 料金は目安です。変更されることがあります。",
+  budgetLabel: "💴 現地費用の目安(1人): {range}",
+  budgetNote: "宿・食事・入場料の合計。交通費は含みません。",
   starAdd: "☆ 行きたいリストに追加",
   starAdded: "⭐ 行きたいリストに追加済み",
   visitedYes: "訪 訪問済み",
@@ -62,7 +75,7 @@ const JA_UI = {
   importDone: "{n}件を読み込みました。",
   exportFilename: "日本の旅-行きたいリスト.json",
   photoCredit: "写真: {a} ({l}) / {s}",
-  footerText: "全47都道府県から選んだ{n}件のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。",
+  footerText: "全47都道府県から選んだ{n}件のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。アクセス状況の把握に Google Analytics を使用しています。",
   ariaClose: "閉じる",
   ariaStar: "{name}を行きたいリストに追加/削除",
   ariaCardOpen: "{name}の詳細を見る",
@@ -117,6 +130,7 @@ let selectedRegion = "";
 let selectedPrefecture = "";
 let selectedCategories = new Set();
 let wishlistOnly = false;
+let visitedOnly = false;
 let sortMode = "added";
 let lastViewHash = ""; // モーダルを閉じたときに戻る先("" / #courses / #course/xx)
 
@@ -151,6 +165,42 @@ function today() {
 function saveWishlist() {
   localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
   document.getElementById("wishlist-count").textContent = Object.keys(wishlist).length;
+  renderStampbook(); // 訪問状態が変わったら朱印帳(表示中のみ)も描き直す
+}
+
+// ---- 朱印帳(行きたいリスト表示中の制覇サマリー)----
+// 訪問済みスポットの件数と、訪問済みのある都道府県を8地方のグリッドで点灯させる
+function renderStampbook() {
+  const box = document.getElementById("stampbook");
+  if (!wishlistOnly) { box.hidden = true; return; }
+  const visitedSpots = SPOTS.filter((s) => wishlist[s.id]?.visited);
+  const visitedPrefs = new Set(visitedSpots.map((s) => s.prefecture));
+  box.hidden = false;
+  box.innerHTML = "";
+  const heading = document.createElement("p");
+  heading.className = "stampbook-title";
+  heading.textContent = t("stampbookTitle", { n: visitedSpots.length, m: visitedPrefs.size });
+  box.appendChild(heading);
+  REGIONS.forEach((region) => {
+    const row = document.createElement("div");
+    row.className = "stampbook-row";
+    const label = document.createElement("span");
+    label.className = "stampbook-region";
+    label.textContent = regionLabel(region);
+    row.appendChild(label);
+    // 地方→都道府県はスポットデータから導出(全47県が揃っている前提は既存仕様)
+    const prefs = [];
+    SPOTS.forEach((s) => {
+      if (s.region === region && !prefs.includes(s.prefecture)) prefs.push(s.prefecture);
+    });
+    prefs.forEach((pref) => {
+      const chip = document.createElement("span");
+      chip.className = "stampbook-pref" + (visitedPrefs.has(pref) ? " on" : "");
+      chip.textContent = prefLabel(pref);
+      row.appendChild(chip);
+    });
+    box.appendChild(row);
+  });
 }
 function ensureEntry(id) {
   if (!wishlist[id]) wishlist[id] = { added: today(), visited: false, memo: "" };
@@ -233,6 +283,80 @@ function creditLink(href, text) {
 }
 function mapUrl(spot) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(spot.mapQuery);
+}
+// 宿検索リンク。アフィリエイト対応する際はこの関数の返すURLを差し替えるだけでよい
+// (楽天トラベルはキーワード検索のGET URLが無いため、当面は Google のホテル検索)
+function hotelSearchUrl(spot) {
+  return "https://www.google.com/travel/search?q=" + encodeURIComponent(spot.mapQuery + " ホテル");
+}
+// 入場料(目安)の表示文字列。0=無料 / 数値=約¥n / [min,max]=¥a〜b / 未設定=null
+function formatFee(spot) {
+  const fee = spot.fee;
+  if (fee === 0) return t("feeFree");
+  if (typeof fee === "number") return t("feeAbout", { n: fee.toLocaleString() });
+  if (Array.isArray(fee)) return t("feeRange", { a: fee[0].toLocaleString(), b: fee[1].toLocaleString() });
+  return null;
+}
+// コースの現地費用レンジ(交通費除く)。宿×(泊数)+食事×日数+入場料合計を[min,max]で返す
+function budgetRange(course) {
+  const b = course.budget;
+  if (!b) return null;
+  const nights = course.days - 1;
+  return [
+    b.hotelPerNight[0] * nights + b.foodPerDay[0] * course.days + b.tickets,
+    b.hotelPerNight[1] * nights + b.foodPerDay[1] * course.days + b.tickets,
+  ];
+}
+function formatBudget(course) {
+  const range = budgetRange(course);
+  if (!range) return null;
+  return t("budgetLabel", { range: "¥" + range[0].toLocaleString() + "〜" + range[1].toLocaleString() });
+}
+// シェア行(X / LINE / URLコピー)を組み立てて返す
+function buildShareRow(url, text, itemId) {
+  const row = document.createElement("div");
+  row.className = "share-row";
+  const label = document.createElement("span");
+  label.textContent = t("shareLabel");
+  row.appendChild(label);
+
+  const xLink = document.createElement("a");
+  xLink.href = "https://twitter.com/intent/tweet?url=" + encodeURIComponent(url) +
+    "&text=" + encodeURIComponent(text);
+  xLink.textContent = "X";
+  const lineLink = document.createElement("a");
+  lineLink.href = "https://social-plugins.line.me/lineit/share?url=" + encodeURIComponent(url);
+  lineLink.textContent = "LINE";
+  [[xLink, "x"], [lineLink, "line"]].forEach(([a, method]) => {
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.className = "share-btn";
+    a.addEventListener("click", (e) => {
+      e.stopPropagation();
+      track("share", { method, item_id: itemId });
+    });
+    row.appendChild(a);
+  });
+
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "share-btn";
+  copyBtn.textContent = t("copyUrl");
+  copyBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    track("share", { method: "copy", item_id: itemId });
+    const done = () => {
+      copyBtn.textContent = t("copied");
+      setTimeout(() => { copyBtn.textContent = t("copyUrl"); }, 1500);
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done).catch(() => prompt("URL", url));
+    else prompt("URL", url);
+  });
+  row.appendChild(copyBtn);
+  return row;
+}
+// スポット/コースの共有用URL(ハッシュ込みの正規形)
+function shareUrl(hash) {
+  return location.origin + location.pathname + hash;
 }
 
 // スポット詳細を開く。モーダル内からの遷移は履歴エントリを積み替える
@@ -343,12 +467,22 @@ prefectureSelect.addEventListener("change", () => {
 });
 wishlistToggle.addEventListener("click", () => {
   wishlistOnly = !wishlistOnly;
+  if (!wishlistOnly) {
+    visitedOnly = false; // リストを閉じたら訪問済み絞り込みも解除
+    document.getElementById("visited-only").classList.remove("active");
+  }
   wishlistToggle.classList.toggle("active", wishlistOnly);
   wishlistTools.hidden = !wishlistOnly;
+  renderStampbook();
   applyFilters();
 });
 sortSelect.addEventListener("change", () => {
   sortMode = sortSelect.value;
+  applyFilters();
+});
+document.getElementById("visited-only").addEventListener("click", () => {
+  visitedOnly = !visitedOnly;
+  document.getElementById("visited-only").classList.toggle("active", visitedOnly);
   applyFilters();
 });
 
@@ -360,8 +494,11 @@ document.getElementById("clear-filters").addEventListener("click", () => {
   selectedPrefecture = "";
   selectedCategories.clear();
   wishlistOnly = false;
+  visitedOnly = false;
   wishlistToggle.classList.remove("active");
+  document.getElementById("visited-only").classList.remove("active");
   wishlistTools.hidden = true;
+  renderStampbook();
   regionTabs.querySelectorAll("button").forEach((b, i) => b.classList.toggle("active", i === 0));
   categoryChips.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
   updatePrefectureOptions();
@@ -419,6 +556,7 @@ function applyFilters() {
     if (selectedPrefecture !== "" && spot.prefecture !== selectedPrefecture) return false;
     if (selectedCategories.size > 0 && ![...selectedCategories].every((c) => spot.categories.includes(c))) return false;
     if (wishlistOnly && !wishlist[spot.id]) return false;
+    if (visitedOnly && !wishlist[spot.id]?.visited) return false;
     if (searchText !== "") {
       // 表示中の言語の訳語でも検索できるよう、原文+訳文を対象にする
       let haystack = spot.name + spot.description + spot.prefecture;
@@ -565,6 +703,8 @@ function toggleStar(id) {
     delete wishlist[id];
   } else {
     ensureEntry(id);
+    const spot = spotById[id];
+    if (spot) track("add_to_wishlist", { spot_name: spot.name, prefecture: spot.prefecture });
   }
   saveWishlist();
 }
@@ -602,10 +742,12 @@ function openSpot(id) {
 
   const info = document.getElementById("dialog-info");
   info.innerHTML = "";
+  const feeText = formatFee(spot);
   [
     [t("bestSeasonLabel"), spotText(spot, "bestSeason")],
     [t("stayTimeLabel"), spotText(spot, "stayTime")],
     [t("accessLabel"), spotText(spot, "access")],
+    ...(feeText ? [[t("feeLabel"), feeText]] : []),
   ].forEach(([label, value]) => {
     const cell = document.createElement("div");
     const dt = document.createElement("dt");
@@ -617,7 +759,12 @@ function openSpot(id) {
     info.appendChild(cell);
   });
 
+  document.getElementById("fee-disclaimer").hidden = !feeText || spot.fee === 0;
   document.getElementById("dialog-map").href = mapUrl(spot);
+  document.getElementById("dialog-hotel").href = hotelSearchUrl(spot);
+  const shareBox = document.getElementById("dialog-share");
+  shareBox.innerHTML = "";
+  shareBox.appendChild(buildShareRow(shareUrl("#spot/" + encodeURIComponent(id)), spotText(spot, "name") + " — " + t("docTitle"), id));
   refreshDialogButtons();
   memoInput.value = wishlist[id]?.memo || "";
 
@@ -671,6 +818,10 @@ dialogStar.addEventListener("click", () => {
   memoInput.value = wishlist[dialogSpotId]?.memo || "";
   refreshDialogButtons();
   cardsStale = true;
+});
+document.getElementById("dialog-hotel").addEventListener("click", () => {
+  const spot = spotById[dialogSpotId];
+  if (spot) track("hotel_search_click", { spot_name: spot.name }); // 収益導線のクリック計測
 });
 dialogVisited.addEventListener("click", () => {
   const entry = ensureEntry(dialogSpotId); // 訪問チェックでリストにも追加
@@ -743,6 +894,13 @@ function renderCourseList() {
     photoBox.appendChild(overlay);
     body.appendChild(meta);
     body.appendChild(summary);
+    const budgetText = formatBudget(course);
+    if (budgetText) {
+      const budget = document.createElement("p");
+      budget.className = "course-budget";
+      budget.textContent = budgetText;
+      body.appendChild(budget);
+    }
     card.appendChild(photoBox);
     card.appendChild(body);
 
@@ -779,6 +937,22 @@ function renderCourseDetail(course) {
   courseDetailEl.appendChild(meta);
   courseDetailEl.appendChild(title);
   courseDetailEl.appendChild(summary);
+  const budgetText = formatBudget(course);
+  if (budgetText) {
+    const budget = document.createElement("p");
+    budget.className = "course-budget";
+    budget.textContent = budgetText;
+    const budgetNote = document.createElement("p");
+    budgetNote.className = "course-budget-note";
+    budgetNote.textContent = t("budgetNote");
+    courseDetailEl.appendChild(budget);
+    courseDetailEl.appendChild(budgetNote);
+  }
+  courseDetailEl.appendChild(buildShareRow(
+    shareUrl("#course/" + encodeURIComponent(course.id)),
+    courseText(course, "title") + " — " + t("docTitle"),
+    course.id
+  ));
 
   course.itinerary.forEach((dayPlan, dayIdx) => {
     const block = document.createElement("div");
@@ -832,8 +1006,35 @@ function showView(view) {
   document.getElementById("seasonal-section").hidden = !isSpots || !seasonalHasItems;
 }
 
+// ---- アクセス解析(GA4)----
+// gtag が無い環境(広告ブロッカー・オフライン等)でも壊れないよう必ずガードする
+function track(name, params) {
+  if (typeof gtag === "function") gtag("event", name, params);
+}
+// 表示中の画面を page_view として送る。タイトルは言語に依らず日本語で統一し、
+// GA4 の「ページとスクリーン」レポートでスポット別の人気がそのまま読めるようにする
+let lastTrackedHash = null;
+function trackRoute(hash) {
+  if (hash === lastTrackedHash) return; // 言語切替などの再描画で二重計上しない
+  lastTrackedHash = hash;
+  let title = "スポット一覧";
+  if (hash.startsWith("#spot/")) {
+    const spot = spotById[decodeURIComponent(hash.slice(6))];
+    if (!spot) return;
+    title = "スポット: " + spot.name;
+  } else if (hash.startsWith("#course/")) {
+    const course = COURSES.find((c) => c.id === decodeURIComponent(hash.slice(8)));
+    if (!course) return;
+    title = "コース: " + course.title;
+  } else if (hash === "#courses") {
+    title = "モデルコース一覧";
+  }
+  track("page_view", { page_title: title, page_location: location.href });
+}
+
 function route() {
   const hash = location.hash;
+  trackRoute(hash);
   if (hash.startsWith("#spot/")) {
     openSpot(decodeURIComponent(hash.slice(6)));
     return; // ビューは変えない(lastViewHash のまま)
@@ -1049,6 +1250,9 @@ function applyStaticTexts() {
   document.querySelector(".seasonal-heading").childNodes[0].nodeValue = t("seasonalHeading");
   document.getElementById("dialog-close").setAttribute("aria-label", t("ariaClose"));
   document.getElementById("dialog-map").textContent = t("mapLink");
+  document.getElementById("dialog-hotel").textContent = t("hotelSearch");
+  document.getElementById("fee-disclaimer").textContent = t("feeDisclaimer");
+  document.getElementById("visited-only").textContent = t("visitedOnlyBtn");
   document.querySelector(".memo-label").textContent = t("memoLabel");
   memoInput.placeholder = t("memoPlaceholder");
   document.getElementById("nearby-heading").textContent = t("nearbyHeading");
@@ -1072,7 +1276,10 @@ function setLang(lang) {
 
 const langSelect = document.getElementById("lang-select");
 langSelect.value = currentLang;
-langSelect.addEventListener("change", () => setLang(langSelect.value));
+langSelect.addEventListener("change", () => {
+  setLang(langSelect.value);
+  track("language_change", { language: currentLang });
+});
 
 // ---- 初期化 ----
 saveWishlist();
