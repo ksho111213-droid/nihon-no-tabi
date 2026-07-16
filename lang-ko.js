@@ -30,7 +30,7 @@ const LANG_KO = {
     copyUrl: "URL 복사",
     copied: "✓ 복사했습니다",
     visitedOnlyBtn: "방문한 곳만",
-    stampbookTitle: "주인장(朱印帳) — 방문 {n}곳・{m}/47 도도부현",
+    stampbookTitle: "슈인초(朱印帳) — 방문 {n}곳・{m}/47 도도부현",
     feeLabel: "입장료(참고)",
     feeFree: "무료",
     feeAbout: "약 ¥{n}",

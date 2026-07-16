@@ -137,6 +137,14 @@ let lastViewHash = ""; // モーダルを閉じたときに戻る先("" / #cours
 const spotById = {};
 SPOTS.forEach((spot) => { spotById[spot.id] = spot; });
 
+// 地方→都道府県の対応(スポット出現順)。SPOTS は不変なので起動時に一度だけ導出する
+const PREFS_BY_REGION = {};
+REGIONS.forEach((region) => { PREFS_BY_REGION[region] = []; });
+SPOTS.forEach((spot) => {
+  const prefs = PREFS_BY_REGION[spot.region];
+  if (prefs && !prefs.includes(spot.prefecture)) prefs.push(spot.prefecture);
+});
+
 // ---- 行きたいリスト(v2: id をキーにしたオブジェクト) ----
 let wishlist = {};
 try {
@@ -165,11 +173,11 @@ function today() {
 function saveWishlist() {
   localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
   document.getElementById("wishlist-count").textContent = Object.keys(wishlist).length;
-  renderStampbook(); // 訪問状態が変わったら朱印帳(表示中のみ)も描き直す
 }
 
 // ---- 朱印帳(行きたいリスト表示中の制覇サマリー)----
-// 訪問済みスポットの件数と、訪問済みのある都道府県を8地方のグリッドで点灯させる
+// 訪問済みスポットの件数と、訪問済みのある都道府県を8地方のグリッドで点灯させる。
+// 描画の起点は applyFilters に一本化(言語切替・フィルタ・ウィッシュリスト変更のすべてが通る)
 function renderStampbook() {
   const box = document.getElementById("stampbook");
   if (!wishlistOnly) { box.hidden = true; return; }
@@ -188,12 +196,7 @@ function renderStampbook() {
     label.className = "stampbook-region";
     label.textContent = regionLabel(region);
     row.appendChild(label);
-    // 地方→都道府県はスポットデータから導出(全47県が揃っている前提は既存仕様)
-    const prefs = [];
-    SPOTS.forEach((s) => {
-      if (s.region === region && !prefs.includes(s.prefecture)) prefs.push(s.prefecture);
-    });
-    prefs.forEach((pref) => {
+    PREFS_BY_REGION[region].forEach((pref) => {
       const chip = document.createElement("span");
       chip.className = "stampbook-pref" + (visitedPrefs.has(pref) ? " on" : "");
       chip.textContent = prefLabel(pref);
@@ -214,6 +217,7 @@ const regionTabs = document.getElementById("region-tabs");
 const categoryChips = document.getElementById("category-chips");
 const wishlistToggle = document.getElementById("wishlist-toggle");
 const wishlistTools = document.getElementById("wishlist-tools");
+const visitedOnlyBtn = document.getElementById("visited-only");
 const sortSelect = document.getElementById("sort-select");
 const resultCount = document.getElementById("result-count");
 const cardsEl = document.getElementById("cards");
@@ -289,10 +293,14 @@ function mapUrl(spot) {
 function hotelSearchUrl(spot) {
   return "https://www.google.com/travel/search?q=" + encodeURIComponent(spot.mapQuery + " ホテル");
 }
-// 入場料(目安)の表示文字列。0=無料 / 数値=約¥n / [min,max]=¥a〜b / 未設定=null
+// 「無料」と扱う fee の形はここだけで判定する(免責文の出し分けも同じ判定を使う)
+function isFreeFee(spot) {
+  return spot.fee === 0;
+}
+// 入場料(目安)の表示文字列。無料 / 数値=約¥n / [min,max]=¥a〜b / 未設定=null
 function formatFee(spot) {
   const fee = spot.fee;
-  if (fee === 0) return t("feeFree");
+  if (isFreeFee(spot)) return t("feeFree");
   if (typeof fee === "number") return t("feeAbout", { n: fee.toLocaleString() });
   if (Array.isArray(fee)) return t("feeRange", { a: fee[0].toLocaleString(), b: fee[1].toLocaleString() });
   return null;
@@ -310,7 +318,17 @@ function budgetRange(course) {
 function formatBudget(course) {
   const range = budgetRange(course);
   if (!range) return null;
-  return t("budgetLabel", { range: "¥" + range[0].toLocaleString() + "〜" + range[1].toLocaleString() });
+  // レンジの区切りは入場料と同じ feeRange テンプレートで言語ごとに揃える
+  return t("budgetLabel", { range: t("feeRange", { a: range[0].toLocaleString(), b: range[1].toLocaleString() }) });
+}
+// コース費用の目安の <p> を組み立てる(budget が無いコースは null)。一覧と詳細で共用
+function buildBudgetLine(course) {
+  const budgetText = formatBudget(course);
+  if (!budgetText) return null;
+  const budget = document.createElement("p");
+  budget.className = "course-budget";
+  budget.textContent = budgetText;
+  return budget;
 }
 // シェア行(X / LINE / URLコピー)を組み立てて返す
 function buildShareRow(url, text, itemId) {
@@ -320,23 +338,16 @@ function buildShareRow(url, text, itemId) {
   label.textContent = t("shareLabel");
   row.appendChild(label);
 
-  const xLink = document.createElement("a");
-  xLink.href = "https://twitter.com/intent/tweet?url=" + encodeURIComponent(url) +
-    "&text=" + encodeURIComponent(text);
-  xLink.textContent = "X";
-  const lineLink = document.createElement("a");
-  lineLink.href = "https://social-plugins.line.me/lineit/share?url=" + encodeURIComponent(url);
-  lineLink.textContent = "LINE";
-  [[xLink, "x"], [lineLink, "line"]].forEach(([a, method]) => {
-    a.target = "_blank";
-    a.rel = "noopener";
+  // 外部リンクの作法(target/rel/伝播停止)は creditLink に集約し、ここでは見た目と計測だけ足す
+  function addShareLink(href, label, method) {
+    const a = creditLink(href, label);
     a.className = "share-btn";
-    a.addEventListener("click", (e) => {
-      e.stopPropagation();
-      track("share", { method, item_id: itemId });
-    });
+    a.addEventListener("click", () => track("share", { method, item_id: itemId }));
     row.appendChild(a);
-  });
+  }
+  addShareLink("https://twitter.com/intent/tweet?url=" + encodeURIComponent(url) +
+    "&text=" + encodeURIComponent(text), "X", "x");
+  addShareLink("https://social-plugins.line.me/lineit/share?url=" + encodeURIComponent(url), "LINE", "line");
 
   const copyBtn = document.createElement("button");
   copyBtn.className = "share-btn";
@@ -354,8 +365,13 @@ function buildShareRow(url, text, itemId) {
   row.appendChild(copyBtn);
   return row;
 }
-// スポット/コースの共有用URL(ハッシュ込みの正規形)
+// スポット/コースの共有用URL(ハッシュ込みの正規形)。
+// file:// で開くと origin が文字列 "null" になるため、その場合は canonical の公開URLを使う
 function shareUrl(hash) {
+  if (location.protocol === "file:") {
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) return canonical.href + hash;
+  }
   return location.origin + location.pathname + hash;
 }
 
@@ -467,22 +483,22 @@ prefectureSelect.addEventListener("change", () => {
 });
 wishlistToggle.addEventListener("click", () => {
   wishlistOnly = !wishlistOnly;
-  if (!wishlistOnly) {
-    visitedOnly = false; // リストを閉じたら訪問済み絞り込みも解除
-    document.getElementById("visited-only").classList.remove("active");
-  }
+  if (!wishlistOnly) setVisitedOnly(false); // リストを閉じたら訪問済み絞り込みも解除
   wishlistToggle.classList.toggle("active", wishlistOnly);
   wishlistTools.hidden = !wishlistOnly;
-  renderStampbook();
   applyFilters();
 });
 sortSelect.addEventListener("change", () => {
   sortMode = sortSelect.value;
   applyFilters();
 });
-document.getElementById("visited-only").addEventListener("click", () => {
-  visitedOnly = !visitedOnly;
-  document.getElementById("visited-only").classList.toggle("active", visitedOnly);
+// visitedOnly はフラグとボタンの active クラスを常にここで揃える
+function setVisitedOnly(on) {
+  visitedOnly = on;
+  visitedOnlyBtn.classList.toggle("active", on);
+}
+visitedOnlyBtn.addEventListener("click", () => {
+  setVisitedOnly(!visitedOnly);
   applyFilters();
 });
 
@@ -494,11 +510,9 @@ document.getElementById("clear-filters").addEventListener("click", () => {
   selectedPrefecture = "";
   selectedCategories.clear();
   wishlistOnly = false;
-  visitedOnly = false;
+  setVisitedOnly(false);
   wishlistToggle.classList.remove("active");
-  document.getElementById("visited-only").classList.remove("active");
   wishlistTools.hidden = true;
-  renderStampbook();
   regionTabs.querySelectorAll("button").forEach((b, i) => b.classList.toggle("active", i === 0));
   categoryChips.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
   updatePrefectureOptions();
@@ -587,6 +601,7 @@ function applyFilters() {
   });
   resultCount.textContent = t("resultCount", { n: filtered.length, total: SPOTS.length });
   emptyMessage.hidden = filtered.length !== 0;
+  renderStampbook();
 }
 
 function buildCard(spot) {
@@ -759,7 +774,7 @@ function openSpot(id) {
     info.appendChild(cell);
   });
 
-  document.getElementById("fee-disclaimer").hidden = !feeText || spot.fee === 0;
+  document.getElementById("fee-disclaimer").hidden = !feeText || isFreeFee(spot);
   document.getElementById("dialog-map").href = mapUrl(spot);
   document.getElementById("dialog-hotel").href = hotelSearchUrl(spot);
   const shareBox = document.getElementById("dialog-share");
@@ -894,13 +909,8 @@ function renderCourseList() {
     photoBox.appendChild(overlay);
     body.appendChild(meta);
     body.appendChild(summary);
-    const budgetText = formatBudget(course);
-    if (budgetText) {
-      const budget = document.createElement("p");
-      budget.className = "course-budget";
-      budget.textContent = budgetText;
-      body.appendChild(budget);
-    }
+    const budgetLine = buildBudgetLine(course);
+    if (budgetLine) body.appendChild(budgetLine);
     card.appendChild(photoBox);
     card.appendChild(body);
 
@@ -937,15 +947,12 @@ function renderCourseDetail(course) {
   courseDetailEl.appendChild(meta);
   courseDetailEl.appendChild(title);
   courseDetailEl.appendChild(summary);
-  const budgetText = formatBudget(course);
-  if (budgetText) {
-    const budget = document.createElement("p");
-    budget.className = "course-budget";
-    budget.textContent = budgetText;
+  const budgetLine = buildBudgetLine(course);
+  if (budgetLine) {
     const budgetNote = document.createElement("p");
     budgetNote.className = "course-budget-note";
     budgetNote.textContent = t("budgetNote");
-    courseDetailEl.appendChild(budget);
+    courseDetailEl.appendChild(budgetLine);
     courseDetailEl.appendChild(budgetNote);
   }
   courseDetailEl.appendChild(buildShareRow(
@@ -1252,7 +1259,7 @@ function applyStaticTexts() {
   document.getElementById("dialog-map").textContent = t("mapLink");
   document.getElementById("dialog-hotel").textContent = t("hotelSearch");
   document.getElementById("fee-disclaimer").textContent = t("feeDisclaimer");
-  document.getElementById("visited-only").textContent = t("visitedOnlyBtn");
+  visitedOnlyBtn.textContent = t("visitedOnlyBtn");
   document.querySelector(".memo-label").textContent = t("memoLabel");
   memoInput.placeholder = t("memoPlaceholder");
   document.getElementById("nearby-heading").textContent = t("nearbyHeading");
