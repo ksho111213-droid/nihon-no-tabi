@@ -1,0 +1,1042 @@
+// 一覧・絞り込み・詳細モーダル・モデルコース・行きたいリストのロジック。
+// 状態はグローバル変数で持ち、URLハッシュで表示(ビュー/詳細)を切り替える。
+const REGIONS = ["北海道", "東北", "関東", "中部", "近畿", "中国", "四国", "九州・沖縄"];
+const CATEGORIES = ["絶景", "温泉", "グルメ", "歴史", "自然", "街歩き"];
+const WISHLIST_KEY = "travel-spots-wishlist-v2";
+const OLD_WISHLIST_KEY = "travel-spots-wishlist";
+
+// 写真がないスポット用の地域色グラデーション
+const REGION_COLORS = {
+  "北海道": ["#88aec7", "#476f8e"],
+  "東北": ["#93b3a2", "#5a7f6c"],
+  "関東": ["#c0a97e", "#8e744a"],
+  "中部": ["#9dabc4", "#5e7092"],
+  "近畿": ["#c79d90", "#8f5c4b"],
+  "中国": ["#b3a3c6", "#786296"],
+  "四国": ["#a6bd9c", "#6a8e5f"],
+  "九州・沖縄": ["#c8ae7c", "#a3684a"],
+};
+
+// ---- 多言語対応 ----
+// UI文言の原本(日本語)。他言語は lang-*.js の辞書から引き、無ければこれにフォールバック。
+// フィルタ・localStorage の内部値(カテゴリ・地域・スポットid)は常に日本語のまま。
+const JA_UI = {
+  docTitle: "日本の旅 — 国内旅行おすすめスポット",
+  eyebrow: "にっぽん、再発見。",
+  heroLead: "全47都道府県から選んだ{spots}のスポットと、{courses}のモデルコース。気になった場所は ⭐ で行きたいリストへ、訪れたら朱印を。",
+  unitSpots: "{n}件",
+  unitCourses: "{n}本",
+  tabSpots: "スポットを探す",
+  tabCourses: "モデルコース",
+  searchPlaceholder: "スポット名・キーワードで検索",
+  prefAll: "都道府県: すべて",
+  allLabel: "すべて",
+  wishlistToggle: "⭐ 行きたいリスト ({n})",
+  sortAdded: "追加順",
+  sortRegion: "地方順",
+  exportBtn: "書き出し",
+  importBtn: "読み込み",
+  resultCount: "{n}件 / 全{total}件",
+  emptyMsg: "条件に合うスポットがありません",
+  clearFilters: "条件をクリアして全件を見る",
+  seasonalHeading: "いまが旬の旅先",
+  months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+  bestSeasonLabel: "ベストシーズン",
+  stayTimeLabel: "滞在目安",
+  accessLabel: "アクセス",
+  mapLink: "地図を見る →",
+  starAdd: "☆ 行きたいリストに追加",
+  starAdded: "⭐ 行きたいリストに追加済み",
+  visitedYes: "訪 訪問済み",
+  visitedNo: "○ まだ行っていない",
+  memoLabel: "わたしのメモ",
+  memoPlaceholder: "気になること、食べたいもの、泊まりたい宿…",
+  nearbyHeading: "あわせて行きたい",
+  inCoursesHeading: "このスポットを含むコース",
+  daysUnit: "{n}日間",
+  dayLabel: "{n}日目",
+  backToCourses: "← コース一覧へ戻る",
+  confirmRemove: "メモや訪問記録も消えます。行きたいリストから外しますか?",
+  importError: "読み込めませんでした。書き出したJSONファイルを選んでください。",
+  importNone: "有効なスポットが見つかりませんでした。",
+  importDone: "{n}件を読み込みました。",
+  exportFilename: "日本の旅-行きたいリスト.json",
+  photoCredit: "写真: {a} ({l}) / Wikimedia Commons",
+  footerText: "全47都道府県から選んだ{n}件のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。",
+  ariaClose: "閉じる",
+  ariaStar: "{name}を行きたいリストに追加/削除",
+  ariaCardOpen: "{name}の詳細を見る",
+  ariaDotShow: "{name}の写真を表示",
+  ariaCaption: "表示中の写真のスポットを開く",
+};
+const LANGS = { ja: null, en: LANG_EN, zh: LANG_ZH, ko: LANG_KO };
+let currentLang = localStorage.getItem("travel-spots-lang");
+if (!Object.prototype.hasOwnProperty.call(LANGS, currentLang)) currentLang = "ja";
+
+function langData() { return LANGS[currentLang]; }
+function t(key, params) {
+  const d = langData();
+  let s = (d && d.ui && d.ui[key] !== undefined) ? d.ui[key] : JA_UI[key];
+  if (params) for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, v);
+  return s;
+}
+function spotText(spot, field) {
+  const d = langData();
+  return (d && d.spots[spot.id] && d.spots[spot.id][field]) || spot[field];
+}
+function regionLabel(region) {
+  const d = langData();
+  return (d && d.regions[region]) || region;
+}
+function prefLabel(pref) {
+  const d = langData();
+  return (d && d.prefectures[pref]) || pref;
+}
+function catLabel(category) {
+  const d = langData();
+  return (d && d.categories[category]) || category;
+}
+// コースの area は「中国・四国」のような複合表記なので分割して地域名を引く
+function areaLabel(area) {
+  return area.split("・").map((part) => regionLabel(part)).join(currentLang === "ja" ? "・" : " / ");
+}
+function courseText(course, field) {
+  const d = langData();
+  const c = d && d.courses[course.id];
+  return (c && c[field]) || course[field];
+}
+function courseNote(course, dayIdx, stepIdx) {
+  const d = langData();
+  const c = d && d.courses[course.id];
+  return (c && c.notes && c.notes[dayIdx] && c.notes[dayIdx][stepIdx]) ||
+    course.itinerary[dayIdx].steps[stepIdx].note;
+}
+
+let searchText = "";
+let selectedRegion = "";
+let selectedPrefecture = "";
+let selectedCategories = new Set();
+let wishlistOnly = false;
+let sortMode = "added";
+let lastViewHash = ""; // モーダルを閉じたときに戻る先("" / #courses / #course/xx)
+
+const spotById = {};
+SPOTS.forEach((spot) => { spotById[spot.id] = spot; });
+
+// ---- 行きたいリスト(v2: id をキーにしたオブジェクト) ----
+let wishlist = {};
+try {
+  wishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY) || "{}") || {};
+} catch (e) { /* 壊れていたら空から始める(アプリ全体を道連れにしない) */ }
+
+// 旧形式(名前の配列)からの移行。改名したスポットは旧名→id の対応表で救う
+const RENAMED_SPOTS = { "阿蘇": "aso-daikanbo" };
+const oldData = localStorage.getItem(OLD_WISHLIST_KEY);
+if (oldData) {
+  try {
+    JSON.parse(oldData).forEach((name) => {
+      const spot = SPOTS.find((s) => s.name === name) || spotById[RENAMED_SPOTS[name]];
+      if (spot && !wishlist[spot.id]) {
+        wishlist[spot.id] = { added: today(), visited: false, memo: "" };
+      }
+    });
+    localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+    localStorage.removeItem(OLD_WISHLIST_KEY); // 移行に成功したときだけ旧データを消す
+  } catch (e) { /* 壊れた旧データは残しておく */ }
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function saveWishlist() {
+  localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+  document.getElementById("wishlist-count").textContent = Object.keys(wishlist).length;
+}
+function ensureEntry(id) {
+  if (!wishlist[id]) wishlist[id] = { added: today(), visited: false, memo: "" };
+  return wishlist[id];
+}
+
+// ---- DOM 参照 ----
+const searchBox = document.getElementById("search-box");
+const prefectureSelect = document.getElementById("prefecture-select");
+const regionTabs = document.getElementById("region-tabs");
+const categoryChips = document.getElementById("category-chips");
+const wishlistToggle = document.getElementById("wishlist-toggle");
+const wishlistTools = document.getElementById("wishlist-tools");
+const sortSelect = document.getElementById("sort-select");
+const resultCount = document.getElementById("result-count");
+const cardsEl = document.getElementById("cards");
+const emptyMessage = document.getElementById("empty-message");
+const spotControls = document.getElementById("spot-controls");
+const coursesView = document.getElementById("courses-view");
+const courseListEl = document.getElementById("course-list");
+const courseDetailEl = document.getElementById("course-detail");
+const tabSpots = document.getElementById("tab-spots");
+const tabCourses = document.getElementById("tab-courses");
+const dialog = document.getElementById("spot-dialog");
+
+// ---- 写真まわり ----
+function photoUrl(spot, width) {
+  return "https://commons.wikimedia.org/wiki/Special:FilePath/" +
+    encodeURIComponent(spot.photo.file) + "?width=" + width;
+}
+function photoPageUrl(spot) {
+  return "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(spot.photo.file);
+}
+function mapUrl(spot) {
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(spot.mapQuery);
+}
+
+// スポット詳細を開く。モーダル内からの遷移は履歴エントリを積み替える
+// (積むと、閉じたあとブラウザの「戻る」で古い #spot/ に当たってモーダルが復活してしまう)
+function gotoSpot(id) {
+  if (dialog.open) {
+    history.replaceState(null, "", location.pathname + location.search + "#spot/" + id);
+    openSpot(id);
+  } else {
+    location.hash = "spot/" + id;
+  }
+}
+
+// 写真ボックス(img + 失敗時のプレースホルダー + クレジット)を container に組み立てる
+function fillPhotoBox(container, spot, width) {
+  container.querySelectorAll("img, .photo-placeholder, .photo-credit").forEach((el) => el.remove());
+  const colors = REGION_COLORS[spot.region];
+  // 読み込み中も灰色ベタにならないよう、写真の背後に常に地域色を敷く
+  container.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+  const placeholder = document.createElement("div");
+  placeholder.className = "photo-placeholder";
+  placeholder.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+  placeholder.textContent = spot.name.charAt(0);
+  if (spot.photo.file) {
+    const img = document.createElement("img");
+    img.src = photoUrl(spot, width);
+    img.alt = spot.name;
+    img.loading = "lazy";
+    img.decoding = "async"; // デコードでメインスレッドを止めない
+    img.addEventListener("error", () => {
+      img.remove();
+      container.prepend(placeholder);
+    });
+    container.prepend(img);
+    const credit = document.createElement("span");
+    credit.className = "photo-credit";
+    const link = document.createElement("a");
+    link.href = photoPageUrl(spot);
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = t("photoCredit", { a: spot.photo.author, l: spot.photo.license });
+    link.addEventListener("click", (e) => e.stopPropagation());
+    credit.appendChild(link);
+    container.appendChild(credit);
+  } else {
+    container.prepend(placeholder);
+  }
+}
+
+// ---- フィルターUIの生成 ----
+["", ...REGIONS].forEach((region) => {
+  const btn = document.createElement("button");
+  btn.dataset.region = region; // 言語切替時の再ラベル用
+  btn.textContent = region === "" ? t("allLabel") : regionLabel(region);
+  if (region === selectedRegion) btn.classList.add("active");
+  btn.addEventListener("click", () => {
+    selectedRegion = region;
+    selectedPrefecture = "";
+    regionTabs.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    updatePrefectureOptions();
+    applyFilters();
+  });
+  regionTabs.appendChild(btn);
+});
+
+CATEGORIES.forEach((category) => {
+  const btn = document.createElement("button");
+  btn.textContent = catLabel(category);
+  btn.dataset.cat = category;
+  btn.addEventListener("click", () => {
+    if (selectedCategories.has(category)) {
+      selectedCategories.delete(category);
+      btn.classList.remove("active");
+    } else {
+      selectedCategories.add(category);
+      btn.classList.add("active");
+    }
+    applyFilters();
+  });
+  categoryChips.appendChild(btn);
+});
+
+function updatePrefectureOptions() {
+  const prefectures = [];
+  SPOTS.forEach((spot) => {
+    if (selectedRegion !== "" && spot.region !== selectedRegion) return;
+    if (!prefectures.includes(spot.prefecture)) prefectures.push(spot.prefecture);
+  });
+  prefectureSelect.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = t("prefAll");
+  prefectureSelect.appendChild(allOption);
+  prefectures.forEach((pref) => {
+    const option = document.createElement("option");
+    option.value = pref;
+    option.textContent = prefLabel(pref);
+    prefectureSelect.appendChild(option);
+  });
+  prefectureSelect.value = selectedPrefecture;
+}
+
+let searchTimer = null;
+searchBox.addEventListener("input", () => {
+  clearTimeout(searchTimer); // 1文字ごとに103枚を再描画しないよう少し待つ
+  searchTimer = setTimeout(() => {
+    searchText = searchBox.value.trim();
+    applyFilters();
+  }, 150);
+});
+prefectureSelect.addEventListener("change", () => {
+  selectedPrefecture = prefectureSelect.value;
+  applyFilters();
+});
+wishlistToggle.addEventListener("click", () => {
+  wishlistOnly = !wishlistOnly;
+  wishlistToggle.classList.toggle("active", wishlistOnly);
+  wishlistTools.hidden = !wishlistOnly;
+  applyFilters();
+});
+sortSelect.addEventListener("change", () => {
+  sortMode = sortSelect.value;
+  applyFilters();
+});
+
+// 0件のときの「条件をクリア」: すべての絞り込みを外して初期状態に戻す
+document.getElementById("clear-filters").addEventListener("click", () => {
+  searchText = "";
+  searchBox.value = "";
+  selectedRegion = "";
+  selectedPrefecture = "";
+  selectedCategories.clear();
+  wishlistOnly = false;
+  wishlistToggle.classList.remove("active");
+  wishlistTools.hidden = true;
+  regionTabs.querySelectorAll("button").forEach((b, i) => b.classList.toggle("active", i === 0));
+  categoryChips.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+  updatePrefectureOptions();
+  applyFilters();
+});
+
+// ---- 書き出し / 読み込み ----
+document.getElementById("export-btn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({ version: 2, wishlist }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = t("exportFilename");
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+const importFile = document.getElementById("import-file");
+document.getElementById("import-btn").addEventListener("click", () => importFile.click());
+importFile.addEventListener("change", () => {
+  const file = importFile.files[0];
+  if (!file) return;
+  file.text().then((text) => {
+    let data;
+    try { data = JSON.parse(text); } catch (e) {
+      alert(t("importError"));
+      return;
+    }
+    const entries = data.wishlist || data; // 素のオブジェクトも受け付ける
+    const imported = {};
+    let count = 0;
+    for (const [id, entry] of Object.entries(entries)) {
+      if (!spotById[id] || !entry || typeof entry !== "object") continue; // typeof null も "object" なので !entry が必要
+      imported[id] = {
+        added: entry.added || today(),
+        visited: !!entry.visited,
+        memo: String(entry.memo || ""),
+      };
+      count++;
+    }
+    if (count === 0) {
+      alert(t("importNone"));
+      return;
+    }
+    wishlist = imported;
+    saveWishlist();
+    applyFilters();
+    alert(t("importDone", { n: count }));
+  });
+  importFile.value = "";
+});
+
+// ---- スポット一覧 ----
+function applyFilters() {
+  let filtered = SPOTS.filter((spot) => {
+    if (selectedRegion !== "" && spot.region !== selectedRegion) return false;
+    if (selectedPrefecture !== "" && spot.prefecture !== selectedPrefecture) return false;
+    if (selectedCategories.size > 0 && ![...selectedCategories].every((c) => spot.categories.includes(c))) return false;
+    if (wishlistOnly && !wishlist[spot.id]) return false;
+    if (searchText !== "") {
+      // 表示中の言語の訳語でも検索できるよう、原文+訳文を対象にする
+      let haystack = spot.name + spot.description + spot.prefecture;
+      const tr = langData() && langData().spots[spot.id];
+      if (tr) haystack += (tr.name || "") + (tr.description || "") + prefLabel(spot.prefecture);
+      if (!haystack.toLowerCase().includes(searchText.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  if (wishlistOnly && sortMode === "added") {
+    filtered = [...filtered].sort((a, b) =>
+      (wishlist[a.id].added + a.name).localeCompare(wishlist[b.id].added + b.name));
+  } // 地方順はデータの並び(地方ごと)のまま
+
+  cardsEl.innerHTML = "";
+  // 絞り込みなしのときだけ、各地方の先頭スポットを2列幅の「地域の顔」カードにする
+  const noFilter = selectedRegion === "" && selectedPrefecture === "" &&
+    selectedCategories.size === 0 && !wishlistOnly && searchText === "";
+  const seenRegion = new Set();
+  filtered.forEach((spot) => {
+    const card = buildCard(spot);
+    if (noFilter && !seenRegion.has(spot.region)) {
+      seenRegion.add(spot.region);
+      card.classList.add("card-wide");
+    }
+    cardsEl.appendChild(card);
+  });
+  resultCount.textContent = t("resultCount", { n: filtered.length, total: SPOTS.length });
+  emptyMessage.hidden = filtered.length !== 0;
+}
+
+function buildCard(spot) {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-label", t("ariaCardOpen", { name: spotText(spot, "name") }));
+
+  const photoBox = document.createElement("div");
+  photoBox.className = "card-photo";
+  fillPhotoBox(photoBox, spot, 480);
+
+  const starBtn = document.createElement("button");
+  starBtn.className = "star-btn";
+  starBtn.textContent = "⭐";
+  const starLabel = t("ariaStar", { name: spotText(spot, "name") });
+  starBtn.title = starLabel;
+  starBtn.setAttribute("aria-label", starLabel);
+  starBtn.classList.toggle("on", !!wishlist[spot.id]);
+  starBtn.setAttribute("aria-pressed", !!wishlist[spot.id]);
+  starBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleStar(spot.id);
+    starBtn.classList.toggle("on", !!wishlist[spot.id]);
+    starBtn.setAttribute("aria-pressed", !!wishlist[spot.id]);
+    if (wishlistOnly) applyFilters();
+  });
+  photoBox.appendChild(starBtn);
+
+  if (wishlist[spot.id]?.visited) {
+    const stamp = document.createElement("span");
+    stamp.className = "visited-stamp";
+    stamp.textContent = "訪";
+    stamp.title = "訪問済み";
+    photoBox.appendChild(stamp);
+  }
+
+  const body = document.createElement("div");
+  body.className = "card-body";
+  const title = document.createElement("h2");
+  title.textContent = spotText(spot, "name");
+  const place = document.createElement("div");
+  place.className = "card-place";
+  place.textContent = `${regionLabel(spot.region)}|${prefLabel(spot.prefecture)}`;
+  const tags = buildTags(spot);
+  const desc = document.createElement("p");
+  desc.className = "card-desc";
+  desc.textContent = spotText(spot, "description");
+
+  const foot = document.createElement("div");
+  foot.className = "card-foot";
+  const season = document.createElement("span");
+  season.textContent = `${t("bestSeasonLabel")}: ${spotText(spot, "bestSeason")}`;
+  const mapLink = buildMapLink(spot);
+  foot.appendChild(season);
+  foot.appendChild(mapLink);
+
+  // スポット名と県名は写真の上に重ねる(可読性はCSSのスクリムで確保)
+  const overlay = document.createElement("div");
+  overlay.className = "card-overlay";
+  overlay.appendChild(place);
+  overlay.appendChild(title);
+  photoBox.appendChild(overlay);
+
+  body.appendChild(tags);
+  body.appendChild(desc);
+  body.appendChild(foot);
+  card.appendChild(photoBox);
+  card.appendChild(body);
+
+  card.addEventListener("click", (e) => {
+    if (e.target.closest("a, .star-btn")) return; // 内側のリンク・ボタンはカードを開かない
+    gotoSpot(spot.id);
+  });
+  card.addEventListener("keydown", (e) => {
+    if (e.target !== card) return; // 内側の⭐やリンクのキーボード操作を奪わない
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      gotoSpot(spot.id);
+    }
+  });
+  return card;
+}
+
+function buildTags(spot) {
+  const tags = document.createElement("div");
+  tags.className = "tags";
+  spot.categories.forEach((category) => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.dataset.cat = category; // 色分けとフィルタの内部値は日本語のまま
+    tag.textContent = catLabel(category);
+    tags.appendChild(tag);
+  });
+  return tags;
+}
+
+function buildMapLink(spot) {
+  const link = document.createElement("a");
+  link.className = "map-link";
+  link.textContent = t("mapLink");
+  link.href = mapUrl(spot);
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.addEventListener("click", (e) => e.stopPropagation());
+  return link;
+}
+
+function toggleStar(id) {
+  const entry = wishlist[id];
+  if (entry) {
+    if ((entry.memo || entry.visited) && !confirm(t("confirmRemove"))) return;
+    delete wishlist[id];
+  } else {
+    ensureEntry(id);
+  }
+  saveWishlist();
+}
+
+// ---- スポット詳細モーダル ----
+const dialogPhoto = document.getElementById("dialog-photo");
+const dialogStar = document.getElementById("dialog-star");
+const dialogVisited = document.getElementById("dialog-visited");
+const memoInput = document.getElementById("memo-input");
+let dialogSpotId = null;
+
+function openSpot(id) {
+  const spot = spotById[id];
+  if (!spot) return;
+  dialogSpotId = id;
+  // まずカードで使った480px(キャッシュ済み)を出し、高解像度はデコード完了後に差し替える
+  // (モーダルを開いた瞬間に大きな画像のデコードが走ってカクつくのを防ぐ)
+  fillPhotoBox(dialogPhoto, spot, 480);
+  if (spot.photo.file) {
+    const hi = new Image();
+    hi.src = photoUrl(spot, 1024);
+    const swap = () => {
+      const img = dialogPhoto.querySelector("img");
+      if (dialog.open && dialogSpotId === id && img) img.src = hi.src;
+    };
+    if (hi.decode) hi.decode().then(swap).catch(() => {});
+    else hi.onload = swap;
+  }
+  document.getElementById("dialog-title").textContent = spotText(spot, "name");
+  document.getElementById("dialog-place").textContent = `${regionLabel(spot.region)}|${prefLabel(spot.prefecture)}`;
+  const tagsEl = document.getElementById("dialog-tags");
+  tagsEl.innerHTML = "";
+  buildTags(spot).querySelectorAll("span").forEach((tag) => tagsEl.appendChild(tag));
+  document.getElementById("dialog-desc").textContent = spotText(spot, "description");
+
+  const info = document.getElementById("dialog-info");
+  info.innerHTML = "";
+  [
+    [t("bestSeasonLabel"), spotText(spot, "bestSeason")],
+    [t("stayTimeLabel"), spotText(spot, "stayTime")],
+    [t("accessLabel"), spotText(spot, "access")],
+  ].forEach(([label, value]) => {
+    const cell = document.createElement("div");
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    cell.appendChild(dt);
+    cell.appendChild(dd);
+    info.appendChild(cell);
+  });
+
+  document.getElementById("dialog-map").href = mapUrl(spot);
+  refreshDialogButtons();
+  memoInput.value = wishlist[id]?.memo || "";
+
+  // あわせて行きたい(周辺スポット)
+  const nearbyList = document.getElementById("nearby-list");
+  nearbyList.innerHTML = "";
+  const nearbySpots = (spot.nearby || []).map((nid) => spotById[nid]).filter(Boolean);
+  document.getElementById("nearby-heading").hidden = nearbySpots.length === 0;
+  nearbySpots.forEach((n) => {
+    const btn = document.createElement("button");
+    const name = document.createElement("span");
+    name.textContent = spotText(n, "name");
+    const pref = document.createElement("span");
+    pref.className = "pref";
+    pref.textContent = prefLabel(n.prefecture);
+    btn.appendChild(name);
+    btn.appendChild(pref);
+    btn.addEventListener("click", () => { gotoSpot(n.id); });
+    nearbyList.appendChild(btn);
+  });
+
+  // このスポットを含むコース
+  const inCourses = document.getElementById("in-courses");
+  inCourses.innerHTML = "";
+  const related = COURSES.filter((c) => c.itinerary.some((d) => d.steps.some((s) => s.spotId === id)));
+  document.getElementById("courses-heading").hidden = related.length === 0;
+  related.forEach((course) => {
+    const btn = document.createElement("button");
+    btn.textContent = courseText(course, "title");
+    btn.addEventListener("click", () => { location.hash = "course/" + course.id; });
+    inCourses.appendChild(btn);
+  });
+
+  if (!dialog.open) dialog.showModal();
+  dialog.scrollTop = 0;
+}
+
+function refreshDialogButtons() {
+  const entry = wishlist[dialogSpotId];
+  dialogStar.textContent = entry ? t("starAdded") : t("starAdd");
+  dialogStar.classList.toggle("on", !!entry);
+  dialogVisited.textContent = entry?.visited ? t("visitedYes") : t("visitedNo");
+  dialogVisited.classList.toggle("on", !!entry?.visited);
+}
+
+// モーダル内の変更は閉じるときにまとめて一覧へ反映する(毎回103枚を再描画しない)
+let cardsStale = false;
+
+dialogStar.addEventListener("click", () => {
+  toggleStar(dialogSpotId);
+  memoInput.value = wishlist[dialogSpotId]?.memo || "";
+  refreshDialogButtons();
+  cardsStale = true;
+});
+dialogVisited.addEventListener("click", () => {
+  const entry = ensureEntry(dialogSpotId); // 訪問チェックでリストにも追加
+  entry.visited = !entry.visited;
+  saveWishlist();
+  refreshDialogButtons();
+  cardsStale = true;
+});
+memoInput.addEventListener("change", () => {
+  const text = memoInput.value.trim();
+  if (text === "" && !wishlist[dialogSpotId]) return;
+  const entry = ensureEntry(dialogSpotId); // メモを書いたらリストにも追加
+  entry.memo = text;
+  saveWishlist();
+  refreshDialogButtons();
+  cardsStale = true;
+});
+
+document.getElementById("dialog-close").addEventListener("click", () => dialog.close());
+dialog.addEventListener("click", (e) => {
+  if (e.target === dialog) dialog.close(); // 背景クリックで閉じる
+});
+dialog.addEventListener("close", () => {
+  dialogSpotId = null;
+  if (location.hash.startsWith("#spot/")) {
+    history.replaceState(null, "", location.pathname + location.search + lastViewHash);
+  }
+  if (cardsStale) {
+    applyFilters();
+    cardsStale = false;
+  }
+});
+
+// ---- モデルコース ----
+function renderCourseList() {
+  courseListEl.innerHTML = "";
+  COURSES.forEach((course) => {
+    // クレジットのリンクを含められるよう、スポットカードと同じ div+role=button 方式
+    const card = document.createElement("div");
+    card.className = "course-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", t("ariaCardOpen", { name: courseText(course, "title") }));
+
+    // 1日目の最初のスポットの写真をコースの顔にする
+    const photoBox = document.createElement("div");
+    photoBox.className = "course-photo";
+    const firstSpot = spotById[course.itinerary[0]?.steps[0]?.spotId];
+    if (firstSpot) fillPhotoBox(photoBox, firstSpot, 480);
+
+    const body = document.createElement("div");
+    body.className = "course-body";
+    const meta = document.createElement("div");
+    meta.className = "course-meta";
+    const area = document.createElement("span");
+    area.textContent = areaLabel(course.area);
+    const days = document.createElement("span");
+    days.className = "days";
+    days.textContent = t("daysUnit", { n: course.days });
+    meta.appendChild(area);
+    meta.appendChild(days);
+    const title = document.createElement("h2");
+    title.textContent = courseText(course, "title");
+    const summary = document.createElement("p");
+    summary.textContent = courseText(course, "summary");
+    // コース名も写真の上に重ねて、スポットカードと表現を揃える
+    const overlay = document.createElement("div");
+    overlay.className = "card-overlay";
+    overlay.appendChild(title);
+    photoBox.appendChild(overlay);
+    body.appendChild(meta);
+    body.appendChild(summary);
+    card.appendChild(photoBox);
+    card.appendChild(body);
+
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return; // クレジットのリンクはコースを開かない
+      location.hash = "course/" + course.id;
+    });
+    card.addEventListener("keydown", (e) => {
+      if (e.target !== card) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        location.hash = "course/" + course.id;
+      }
+    });
+    courseListEl.appendChild(card);
+  });
+}
+
+function renderCourseDetail(course) {
+  courseDetailEl.innerHTML = "";
+  const back = document.createElement("button");
+  back.className = "back-btn";
+  back.textContent = t("backToCourses");
+  back.addEventListener("click", () => { location.hash = "courses"; });
+  const meta = document.createElement("div");
+  meta.className = "course-meta";
+  meta.innerHTML = `<span>${areaLabel(course.area)}</span><span class="days">${t("daysUnit", { n: course.days })}</span>`;
+  const title = document.createElement("h2");
+  title.textContent = courseText(course, "title");
+  const summary = document.createElement("p");
+  summary.className = "course-summary";
+  summary.textContent = courseText(course, "summary");
+  courseDetailEl.appendChild(back);
+  courseDetailEl.appendChild(meta);
+  courseDetailEl.appendChild(title);
+  courseDetailEl.appendChild(summary);
+
+  course.itinerary.forEach((dayPlan, dayIdx) => {
+    const block = document.createElement("div");
+    block.className = "day-block";
+    const label = document.createElement("div");
+    label.className = "day-label";
+    label.textContent = t("dayLabel", { n: dayPlan.day });
+    block.appendChild(label);
+    dayPlan.steps.forEach((step, stepIdx) => {
+      const spot = spotById[step.spotId];
+      if (!spot) return;
+      const row = document.createElement("div");
+      row.className = "step";
+      const spotBtn = document.createElement("button");
+      spotBtn.className = "step-spot";
+      const name = document.createElement("span");
+      name.textContent = spotText(spot, "name");
+      const pref = document.createElement("span");
+      pref.className = "pref";
+      pref.textContent = prefLabel(spot.prefecture);
+      spotBtn.appendChild(name);
+      spotBtn.appendChild(pref);
+      spotBtn.addEventListener("click", () => { gotoSpot(spot.id); });
+      const note = document.createElement("p");
+      note.className = "step-note";
+      note.textContent = courseNote(course, dayIdx, stepIdx);
+      row.appendChild(spotBtn);
+      row.appendChild(note);
+      block.appendChild(row);
+    });
+    courseDetailEl.appendChild(block);
+  });
+}
+
+// ---- ビュー切り替えとハッシュルーティング ----
+// "" → スポット一覧 / #courses → コース一覧 / #course/<id> → コース詳細
+// #spot/<id> → 現在のビューの上に詳細モーダル
+tabSpots.addEventListener("click", () => { location.hash = ""; });
+tabCourses.addEventListener("click", () => { location.hash = "courses"; });
+
+function showView(view) {
+  const isSpots = view === "spots";
+  tabSpots.classList.toggle("active", isSpots);
+  tabCourses.classList.toggle("active", !isSpots);
+  spotControls.hidden = !isSpots;
+  cardsEl.hidden = !isSpots;
+  resultCount.hidden = !isSpots;
+  // 0件メッセージはビューを行き来しても状態を保つ(コース表示中だけ隠す)
+  emptyMessage.hidden = !isSpots || cardsEl.children.length !== 0;
+  coursesView.hidden = isSpots;
+  document.getElementById("seasonal-section").hidden = !isSpots || !seasonalHasItems;
+}
+
+function route() {
+  const hash = location.hash;
+  if (hash.startsWith("#spot/")) {
+    openSpot(decodeURIComponent(hash.slice(6)));
+    return; // ビューは変えない(lastViewHash のまま)
+  }
+  if (dialog.open) dialog.close();
+  if (hash.startsWith("#course/")) {
+    const course = COURSES.find((c) => c.id === decodeURIComponent(hash.slice(8)));
+    if (course) {
+      lastViewHash = hash;
+      showView("courses");
+      courseListEl.hidden = true;
+      courseDetailEl.hidden = false;
+      renderCourseDetail(course);
+      return;
+    }
+  }
+  if (hash === "#courses") {
+    lastViewHash = hash;
+    showView("courses");
+    courseListEl.hidden = false;
+    courseDetailEl.hidden = true;
+    return;
+  }
+  lastViewHash = "";
+  showView("spots");
+}
+window.addEventListener("hashchange", route);
+
+// ---- 固定ナビ ----
+// ヒーローが画面から出たら .view-tabs にブランド名を表示する
+const heroEl = document.querySelector(".hero");
+const viewTabsEl = document.querySelector(".view-tabs");
+new IntersectionObserver((entries) => {
+  viewTabsEl.classList.toggle("scrolled", !entries[0].isIntersecting);
+}, { rootMargin: "-56px 0px 0px 0px" }).observe(heroEl);
+
+// ---- ヒーロー・スライドショー ----
+// 季節と地域のバランスで選んだ5枚を7秒ごとにクロスフェードする。
+// 画面外・タブ非表示・reduced-motion では自動再生しない。
+const HERO_SLIDES = ["kawaguchiko", "biei-blue-pond", "kabira-bay", "fushimi-inari", "shirakawago"];
+const heroSlidesEl = document.getElementById("hero-slides");
+const heroCaptionEl = document.getElementById("hero-caption");
+const heroCreditEl = document.getElementById("hero-credit");
+const heroDotsEl = document.getElementById("hero-dots");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let heroIndex = 0;
+let heroTimer = null;
+let heroVisible = true;
+
+HERO_SLIDES.forEach((id, i) => {
+  const spot = spotById[id];
+  const img = document.createElement("img");
+  img.src = photoUrl(spot, 1920);
+  img.alt = spot.name;
+  img.loading = i === 0 ? "eager" : "lazy";
+  img.decoding = "async";
+  img.className = "hero-slide";
+  heroSlidesEl.appendChild(img);
+  const dot = document.createElement("button");
+  dot.className = "hero-dot";
+  dot.setAttribute("aria-label", t("ariaDotShow", { name: spotText(spot, "name") }));
+  dot.addEventListener("click", () => {
+    const slideImg = heroSlidesEl.children[i];
+    const show = () => {
+      showHeroSlide(i, false);
+      restartHeroTimer(); // 手動操作したら周期を仕切り直す
+    };
+    if (slideImg && slideImg.decode) slideImg.decode().then(show).catch(show);
+    else show();
+  });
+  heroDotsEl.appendChild(dot);
+});
+
+function showHeroSlide(index, initial) {
+  heroIndex = index;
+  heroSlidesEl.querySelectorAll(".hero-slide").forEach((el, i) => el.classList.toggle("active", i === index));
+  heroDotsEl.querySelectorAll(".hero-dot").forEach((el, i) => el.classList.toggle("active", i === index));
+  const spot = spotById[HERO_SLIDES[index]];
+  heroCaptionEl.innerHTML = "";
+  const name = document.createElement("strong");
+  name.textContent = spotText(spot, "name");
+  const pref = document.createElement("span");
+  pref.textContent = prefLabel(spot.prefecture);
+  heroCaptionEl.appendChild(name);
+  heroCaptionEl.appendChild(pref);
+  heroCreditEl.href = photoPageUrl(spot);
+  heroCreditEl.textContent = t("photoCredit", { a: spot.photo.author, l: spot.photo.license });
+  // 時間差表示: 写真のフェードよりワンテンポ遅れてキャプションが入れ替わる
+  // (初回ロード時はCSSのカスケード演出に任せる)
+  if (!initial && !reducedMotion.matches) {
+    heroCaptionEl.classList.remove("caption-in");
+    void heroCaptionEl.offsetWidth; // リフローを挟んでアニメーションを再発火させる
+    heroCaptionEl.classList.add("caption-in");
+  }
+}
+
+function stopHeroTimer() {
+  clearInterval(heroTimer);
+  heroTimer = null;
+}
+function restartHeroTimer() {
+  stopHeroTimer();
+  if (reducedMotion.matches || document.hidden || !heroVisible) return;
+  heroTimer = setInterval(() => {
+    // 次の写真のデコードを済ませてからフェードする(切替時のカクつき防止)
+    const next = (heroIndex + 1) % HERO_SLIDES.length;
+    const img = heroSlidesEl.children[next];
+    const show = () => showHeroSlide(next, false);
+    if (img && img.decode) img.decode().then(show).catch(show);
+    else show();
+  }, 7000);
+}
+new IntersectionObserver((entries) => {
+  heroVisible = entries[0].isIntersecting;
+  restartHeroTimer();
+}).observe(heroEl);
+document.addEventListener("visibilitychange", restartHeroTimer);
+heroCaptionEl.addEventListener("click", () => { gotoSpot(HERO_SLIDES[heroIndex]); });
+
+// ---- いまが旬の旅先(ベストシーズンが今月のスポット) ----
+let seasonalHasItems = false;
+
+function seasonalSpots() {
+  const month = new Date().getMonth() + 1;
+  const matches = SPOTS.filter((spot) => {
+    const s = spot.bestSeason;
+    if (s.includes("通年")) return false;
+    const range = s.match(/(\d+)〜(\d+)月/);
+    if (range) {
+      const a = +range[1], b = +range[2];
+      return a <= b ? (month >= a && month <= b) : (month >= a || month <= b); // 「11〜2月」の年またぎ対応
+    }
+    const single = s.match(/(\d+)月/);
+    return single ? +single[1] === month : false;
+  });
+  // 特定の地方に偏らないよう、1地方2件までで最大12件
+  const perRegion = {};
+  const picked = [];
+  for (const spot of matches) {
+    perRegion[spot.region] = (perRegion[spot.region] || 0) + 1;
+    if (perRegion[spot.region] <= 2) picked.push(spot);
+    if (picked.length >= 12) break;
+  }
+  return picked;
+}
+
+function renderSeasonal() {
+  const list = seasonalSpots();
+  seasonalHasItems = list.length > 0;
+  if (!seasonalHasItems) return;
+  document.getElementById("seasonal-month").textContent = t("months")[new Date().getMonth()];
+  const strip = document.getElementById("seasonal-strip");
+  strip.innerHTML = "";
+  list.forEach((spot) => {
+    const chip = document.createElement("div");
+    chip.className = "seasonal-chip";
+    chip.tabIndex = 0;
+    chip.setAttribute("role", "button");
+    chip.setAttribute("aria-label", t("ariaCardOpen", { name: spotText(spot, "name") }));
+    fillPhotoBox(chip, spot, 480);
+    const overlay = document.createElement("div");
+    overlay.className = "seasonal-overlay";
+    const name = document.createElement("strong");
+    name.textContent = spotText(spot, "name");
+    const pref = document.createElement("span");
+    pref.textContent = prefLabel(spot.prefecture);
+    overlay.appendChild(name);
+    overlay.appendChild(pref);
+    chip.appendChild(overlay);
+    chip.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return; // クレジットのリンクはモーダルを開かない
+      gotoSpot(spot.id);
+    });
+    chip.addEventListener("keydown", (e) => {
+      if (e.target !== chip) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        gotoSpot(spot.id);
+      }
+    });
+    strip.appendChild(chip);
+  });
+}
+
+// ---- 言語の適用 ----
+// 静的なUI文言(HTMLに書かれているもの)を現在の言語で貼り直す
+function applyStaticTexts() {
+  document.title = t("docTitle");
+  document.documentElement.lang = currentLang === "zh" ? "zh-Hans" : currentLang;
+  document.querySelector(".hero-eyebrow").textContent = t("eyebrow");
+  document.querySelector(".hero-lead").innerHTML = t("heroLead", {
+    spots: `<span id="spot-total">${t("unitSpots", { n: SPOTS.length })}</span>`,
+    courses: `<span id="course-total">${t("unitCourses", { n: COURSES.length })}</span>`,
+  });
+  heroCaptionEl.setAttribute("aria-label", t("ariaCaption"));
+  tabSpots.textContent = t("tabSpots");
+  tabCourses.textContent = t("tabCourses");
+  searchBox.placeholder = t("searchPlaceholder");
+  regionTabs.querySelectorAll("button").forEach((btn) => {
+    btn.textContent = btn.dataset.region === "" ? t("allLabel") : regionLabel(btn.dataset.region);
+  });
+  categoryChips.querySelectorAll("button").forEach((btn) => {
+    btn.textContent = catLabel(btn.dataset.cat);
+  });
+  wishlistToggle.innerHTML = t("wishlistToggle", {
+    n: `<span id="wishlist-count">${Object.keys(wishlist).length}</span>`,
+  });
+  sortSelect.options[0].textContent = t("sortAdded");
+  sortSelect.options[1].textContent = t("sortRegion");
+  document.getElementById("export-btn").textContent = t("exportBtn");
+  document.getElementById("import-btn").textContent = t("importBtn");
+  emptyMessage.childNodes[0].nodeValue = t("emptyMsg");
+  document.getElementById("clear-filters").textContent = t("clearFilters");
+  document.querySelector(".seasonal-heading").childNodes[0].nodeValue = t("seasonalHeading");
+  document.getElementById("dialog-close").setAttribute("aria-label", t("ariaClose"));
+  document.getElementById("dialog-map").textContent = t("mapLink");
+  document.querySelector(".memo-label").textContent = t("memoLabel");
+  memoInput.placeholder = t("memoPlaceholder");
+  document.getElementById("nearby-heading").textContent = t("nearbyHeading");
+  document.getElementById("courses-heading").textContent = t("inCoursesHeading");
+  document.querySelector(".site-footer p:last-child").textContent = t("footerText", { n: SPOTS.length });
+}
+
+function setLang(lang) {
+  currentLang = Object.prototype.hasOwnProperty.call(LANGS, lang) ? lang : "ja";
+  localStorage.setItem("travel-spots-lang", currentLang);
+  langSelect.value = currentLang;
+  applyStaticTexts();
+  updatePrefectureOptions();
+  applyFilters();
+  renderCourseList();
+  renderSeasonal();
+  showHeroSlide(heroIndex, true); // キャプションとクレジットを現在の言語で描き直す
+  if (dialog.open && dialogSpotId) openSpot(dialogSpotId);
+  if (!courseDetailEl.hidden) route(); // コース詳細を開いていれば描き直す
+}
+
+const langSelect = document.getElementById("lang-select");
+langSelect.value = currentLang;
+langSelect.addEventListener("change", () => setLang(langSelect.value));
+
+// ---- 初期化 ----
+saveWishlist();
+setLang(currentLang);
+restartHeroTimer();
+route();

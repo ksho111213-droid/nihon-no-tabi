@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日本の旅 — 国内旅行おすすめスポット</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗾</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<select id="lang-select" aria-label="言語 / Language">
+  <option value="ja">日本語</option>
+  <option value="en">English</option>
+  <option value="zh">简体中文</option>
+  <option value="ko">한국어</option>
+</select>
+
+<header class="hero">
+  <div class="hero-slides" id="hero-slides"></div>
+  <div class="hero-inner">
+    <p class="hero-eyebrow">にっぽん、再発見。</p>
+    <h1>日本の旅。</h1>
+    <p class="hero-lead">全47都道府県から選んだ<span id="spot-total"></span>のスポットと、<span id="course-total"></span>のモデルコース。気になった場所は ⭐ で行きたいリストへ、訪れたら朱印を。</p>
+    <button class="hero-caption" id="hero-caption" aria-label="表示中の写真のスポットを開く"></button>
+  </div>
+  <div class="hero-dots" id="hero-dots" role="group" aria-label="ヒーロー写真の切り替え"></div>
+  <a class="hero-credit" id="hero-credit" href="#" target="_blank" rel="noopener"></a>
+</header>
+
+<section class="seasonal" id="seasonal-section" hidden>
+  <h2 class="seasonal-heading">いまが旬の旅先<span id="seasonal-month"></span></h2>
+  <div class="seasonal-strip" id="seasonal-strip"></div>
+</section>
+
+<nav class="view-tabs" aria-label="表示切り替え">
+  <a class="brand" href="#">日本の旅。</a>
+  <button id="tab-spots" class="active">スポットを探す</button>
+  <button id="tab-courses">モデルコース</button>
+</nav>
+
+<div class="controls" id="spot-controls">
+  <div class="search-row">
+    <input type="text" id="search-box" placeholder="スポット名・キーワードで検索">
+    <select id="prefecture-select">
+      <option value="">都道府県: すべて</option>
+    </select>
+  </div>
+  <div class="region-tabs" id="region-tabs"></div>
+  <div class="category-chips" id="category-chips"></div>
+  <div class="wishlist-bar">
+    <button id="wishlist-toggle">⭐ 行きたいリスト (<span id="wishlist-count">0</span>)</button>
+    <div class="wishlist-tools" id="wishlist-tools" hidden>
+      <select id="sort-select">
+        <option value="added">追加順</option>
+        <option value="region">地方順</option>
+      </select>
+      <button id="export-btn">書き出し</button>
+      <button id="import-btn">読み込み</button>
+      <input type="file" id="import-file" accept="application/json" hidden>
+    </div>
+  </div>
+  <p id="result-count"></p>
+</div>
+
+<div class="cards" id="cards"></div>
+<p id="empty-message" hidden>条件に合うスポットがありません<button id="clear-filters">条件をクリアして全件を見る</button></p>
+
+<div class="courses-wrap" id="courses-view" hidden>
+  <div class="course-list" id="course-list"></div>
+  <div class="course-detail" id="course-detail" hidden></div>
+</div>
+
+<dialog id="spot-dialog" aria-labelledby="dialog-title">
+  <div class="dialog-photo" id="dialog-photo">
+    <button class="dialog-close" id="dialog-close" aria-label="閉じる">✕</button>
+  </div>
+  <div class="dialog-body">
+    <h2 id="dialog-title"></h2>
+    <p class="dialog-place" id="dialog-place"></p>
+    <div class="tags" id="dialog-tags"></div>
+    <p class="dialog-desc" id="dialog-desc"></p>
+    <dl class="info-grid" id="dialog-info"></dl>
+    <div class="dialog-actions">
+      <a class="map-link" id="dialog-map" target="_blank" rel="noopener">地図を見る →</a>
+      <button id="dialog-star"></button>
+      <button id="dialog-visited"></button>
+    </div>
+    <label class="memo-label" for="memo-input">わたしのメモ</label>
+    <textarea id="memo-input" placeholder="気になること、食べたいもの、泊まりたい宿…"></textarea>
+    <p class="sub-heading" id="nearby-heading" hidden>あわせて行きたい</p>
+    <div class="nearby-list" id="nearby-list"></div>
+    <p class="sub-heading" id="courses-heading" hidden>このスポットを含むコース</p>
+    <div class="in-courses" id="in-courses"></div>
+  </div>
+</dialog>
+
+<footer class="site-footer">
+  <p class="footer-brand">日本の旅。</p>
+  <p>全47都道府県から選んだ<span id="footer-total"></span>のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。</p>
+</footer>
+
+<script src="spots.js"></script>
+<script src="courses.js"></script>
+<script src="lang-en.js"></script>
+<script src="lang-zh.js"></script>
+<script src="lang-ko.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
