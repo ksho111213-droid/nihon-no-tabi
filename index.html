@@ -2,18 +2,24 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<!-- 旧URL(GitHub Pages)で開かれたら新URLへ。共有済みリンクの救済用 -->
+<script>
+if (location.hostname.endsWith("github.io")) location.replace(
+  "https://tabisome.netlify.app" +
+  location.pathname.replace(/^\/nihon-no-tabi/, "") + location.search + location.hash);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>日本の旅 — 全47都道府県の国内旅行おすすめスポット203選</title>
+<title>たびそめ。— 全47都道府県の国内旅行おすすめスポット203選</title>
 <meta name="description" content="全47都道府県から選んだ203の観光スポットと13のモデルコースを写真つきで紹介。絶景・温泉・グルメ・歴史・自然・街歩き。日本語・English・中文・한국어対応、行きたいリストで旅の計画も。">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#f7f7f5">
-<link rel="canonical" href="https://ksho111213-droid.github.io/nihon-no-tabi/">
+<link rel="canonical" href="https://tabisome.netlify.app/">
 <!-- Open Graph(SNS共有時のプレビュー) -->
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="日本の旅">
-<meta property="og:title" content="日本の旅 — 全47都道府県の国内旅行おすすめスポット203選">
+<meta property="og:site_name" content="たびそめ">
+<meta property="og:title" content="たびそめ。— 全47都道府県の国内旅行おすすめスポット203選">
 <meta property="og:description" content="全47都道府県から選んだ203の観光スポットと13のモデルコース。絶景・温泉・グルメ・歴史・自然・街歩き。4言語対応。">
-<meta property="og:url" content="https://ksho111213-droid.github.io/nihon-no-tabi/">
+<meta property="og:url" content="https://tabisome.netlify.app/">
 <!-- og:image はリダイレクトを追わないスクレイパー(LINE等)向けに upload.wikimedia.org の直URLを使う -->
 <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Mount_Fuji_from_Oishi_Park.jpg/1280px-Mount_Fuji_from_Oishi_Park.jpg">
 <meta property="og:locale" content="ja_JP">
@@ -21,16 +27,16 @@
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="日本の旅 — 国内旅行おすすめスポット203選">
+<meta name="twitter:title" content="たびそめ。— 国内旅行おすすめスポット203選">
 <meta name="twitter:description" content="全47都道府県から選んだ203の観光スポットと13のモデルコース。写真つき・4言語対応。">
 <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Mount_Fuji_from_Oishi_Park.jpg/1280px-Mount_Fuji_from_Oishi_Park.jpg">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "日本の旅",
-  "alternateName": "Nihon no Tabi — Japan Travel Spots",
-  "url": "https://ksho111213-droid.github.io/nihon-no-tabi/",
+  "name": "たびそめ",
+  "alternateName": ["Tabisome — Japan Travel Spots", "日本の旅"],
+  "url": "https://tabisome.netlify.app/",
   "description": "全47都道府県から選んだ203の観光スポットと13のモデルコースを写真つきで紹介する国内旅行ガイド。",
   "inLanguage": ["ja", "en", "zh", "ko"]
 }
@@ -62,7 +68,7 @@ gtag('config', 'G-FY0S8WTDPF', { send_page_view: false });
   <div class="hero-slides" id="hero-slides"></div>
   <div class="hero-inner">
     <p class="hero-eyebrow">にっぽん、再発見。</p>
-    <h1>日本の旅。</h1>
+    <h1>たびそめ。</h1>
     <p class="hero-lead">全47都道府県から選んだ<span id="spot-total"></span>のスポットと、<span id="course-total"></span>のモデルコース。気になった場所は ⭐ で行きたいリストへ、訪れたら朱印を。</p>
     <button class="hero-caption" id="hero-caption" aria-label="表示中の写真のスポットを開く"></button>
   </div>
@@ -76,7 +82,7 @@ gtag('config', 'G-FY0S8WTDPF', { send_page_view: false });
 </section>
 
 <nav class="view-tabs" aria-label="表示切り替え">
-  <a class="brand" href="#">日本の旅。</a>
+  <a class="brand" href="#">たびそめ。</a>
   <button id="tab-spots" class="active">スポットを探す</button>
   <button id="tab-courses">モデルコース</button>
 </nav>
@@ -143,7 +149,7 @@ gtag('config', 'G-FY0S8WTDPF', { send_page_view: false });
 </dialog>
 
 <footer class="site-footer">
-  <p class="footer-brand">日本の旅。</p>
+  <p class="footer-brand">たびそめ。</p>
   <p class="footer-feedback"><a id="feedback-link" target="_blank" rel="noopener" hidden></a></p>
   <p>全47都道府県から選んだ<span id="footer-total"></span>のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。</p>
 </footer>

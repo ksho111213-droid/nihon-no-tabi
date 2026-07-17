@@ -2,7 +2,7 @@
 // キーが無い項目は日本語(原本)にフォールバックする。
 const LANG_EN = {
   ui: {
-    docTitle: "Nihon no Tabi — Japan Travel Guide",
+    docTitle: "Tabisome — Japan Travel Guide",
     eyebrow: "Rediscover Japan.",
     heroLead: "{spots} hand-picked spots across all 47 prefectures, plus {courses} model itineraries. Tap ⭐ to save places to your wishlist, and stamp them once you've been.",
     unitSpots: "{n}",
@@ -50,11 +50,11 @@ const LANG_EN = {
     daysUnit: "{n} days",
     dayLabel: "Day {n}",
     backToCourses: "← Back to itineraries",
-    confirmRemove: "This will also delete your notes and visited status. Remove from wishlist?",
+    confirmRemove: "This will also delete your notes. Remove from wishlist?",
     importError: "Could not read the file. Please choose a JSON file exported from this site.",
     importNone: "No valid spots found.",
     importDone: "Imported {n} spots.",
-    exportFilename: "japan-travel-wishlist.json",
+    exportFilename: "tabisome-wishlist.json",
     photoCredit: "Photo: {a} ({l}) / {s}",
     feedbackLink: "📝 Send feedback",
     footerText: "A guide to {n} hand-picked spots and model itineraries across all 47 prefectures of Japan. Photos are from Wikimedia Commons, credited on each image. Google Analytics is used to understand site traffic.",

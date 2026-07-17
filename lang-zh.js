@@ -1,7 +1,7 @@
 // 简体中文の翻訳辞書。キーが無い項目は日本語(原本)にフォールバックする。
 const LANG_ZH = {
   ui: {
-    docTitle: "日本之旅 — 日本国内旅行推荐景点",
+    docTitle: "Tabisome — 日本国内旅行推荐景点",
     eyebrow: "重新发现日本。",
     heroLead: "从全部47个都道府县精选的{spots}个景点,以及{courses}条示范行程。看到心动的地方就点 ⭐ 加入心愿清单,去过之后盖上纪念印章吧。",
     unitSpots: "{n}",
@@ -49,11 +49,11 @@ const LANG_ZH = {
     daysUnit: "{n}天",
     dayLabel: "第{n}天",
     backToCourses: "← 返回行程列表",
-    confirmRemove: "笔记和到访记录也会一并删除。确定从心愿清单移除吗?",
+    confirmRemove: "笔记也会一并删除。确定从心愿清单移除吗?",
     importError: "无法读取文件。请选择从本站导出的JSON文件。",
     importNone: "未找到有效的景点。",
     importDone: "已导入{n}个景点。",
-    exportFilename: "日本之旅-心愿清单.json",
+    exportFilename: "Tabisome-心愿清单.json",
     photoCredit: "照片: {a} ({l}) / {s}",
     feedbackLink: "📝 意见反馈",
     footerText: "从全部47个都道府县精选{n}个景点与示范行程的旅行指南。照片来自 Wikimedia Commons,每张照片均标注了出处。本站使用 Google Analytics 统计访问情况。",

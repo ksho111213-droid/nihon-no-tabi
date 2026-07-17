@@ -6,6 +6,7 @@ const CATEGORIES = ["絶景", "温泉", "グルメ", "歴史", "自然", "街歩
 const FEEDBACK_URL = "";
 const WISHLIST_KEY = "travel-spots-wishlist-v2";
 const OLD_WISHLIST_KEY = "travel-spots-wishlist";
+const VISITED_KEY = "travel-spots-visited";
 
 // 写真がないスポット用の地域色グラデーション
 const REGION_COLORS = {
@@ -23,7 +24,7 @@ const REGION_COLORS = {
 // UI文言の原本(日本語)。他言語は lang-*.js の辞書から引き、無ければこれにフォールバック。
 // フィルタ・localStorage の内部値(カテゴリ・地域・スポットid)は常に日本語のまま。
 const JA_UI = {
-  docTitle: "日本の旅 — 国内旅行おすすめスポット",
+  docTitle: "たびそめ。— 国内旅行おすすめスポット",
   eyebrow: "にっぽん、再発見。",
   heroLead: "全47都道府県から選んだ{spots}のスポットと、{courses}のモデルコース。気になった場所は ⭐ で行きたいリストへ、訪れたら朱印を。",
   unitSpots: "{n}件",
@@ -71,11 +72,11 @@ const JA_UI = {
   daysUnit: "{n}日間",
   dayLabel: "{n}日目",
   backToCourses: "← コース一覧へ戻る",
-  confirmRemove: "メモや訪問記録も消えます。行きたいリストから外しますか?",
+  confirmRemove: "メモも消えます。行きたいリストから外しますか?",
   importError: "読み込めませんでした。書き出したJSONファイルを選んでください。",
   importNone: "有効なスポットが見つかりませんでした。",
   importDone: "{n}件を読み込みました。",
-  exportFilename: "日本の旅-行きたいリスト.json",
+  exportFilename: "たびそめ-行きたいリスト.json",
   photoCredit: "写真: {a} ({l}) / {s}",
   feedbackLink: "📝 ご意見・感想はこちら",
   footerText: "全47都道府県から選んだ{n}件のスポットとモデルコースの手引き。写真は Wikimedia Commons のものを使用し、各写真にクレジットを表示しています。アクセス状況の把握に Google Analytics を使用しています。",
@@ -154,6 +155,28 @@ try {
   wishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY) || "{}") || {};
 } catch (e) { /* 壊れていたら空から始める(アプリ全体を道連れにしない) */ }
 
+// ---- 訪問済み(id → true。行きたいリストとは独立) ----
+let visitedIds = {};
+try {
+  visitedIds = JSON.parse(localStorage.getItem(VISITED_KEY) || "{}") || {};
+} catch (e) { /* 壊れていたら空から始める */ }
+
+// 旧形式(リストのエントリ内に visited を持つ)からの移行
+{
+  let migrated = false;
+  for (const [id, entry] of Object.entries(wishlist)) {
+    if (entry && entry.visited !== undefined) {
+      if (entry.visited) visitedIds[id] = true;
+      delete entry.visited;
+      migrated = true;
+    }
+  }
+  if (migrated) {
+    localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+    localStorage.setItem(VISITED_KEY, JSON.stringify(visitedIds));
+  }
+}
+
 // 旧形式(名前の配列)からの移行。改名したスポットは旧名→id の対応表で救う
 const RENAMED_SPOTS = { "阿蘇": "aso-daikanbo" };
 const oldData = localStorage.getItem(OLD_WISHLIST_KEY);
@@ -162,7 +185,7 @@ if (oldData) {
     JSON.parse(oldData).forEach((name) => {
       const spot = SPOTS.find((s) => s.name === name) || spotById[RENAMED_SPOTS[name]];
       if (spot && !wishlist[spot.id]) {
-        wishlist[spot.id] = { added: today(), visited: false, memo: "" };
+        wishlist[spot.id] = { added: today(), memo: "" };
       }
     });
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
@@ -177,6 +200,9 @@ function saveWishlist() {
   localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
   document.getElementById("wishlist-count").textContent = Object.keys(wishlist).length;
 }
+function saveVisited() {
+  localStorage.setItem(VISITED_KEY, JSON.stringify(visitedIds));
+}
 
 // ---- 朱印帳(行きたいリスト表示中の制覇サマリー)----
 // 訪問済みスポットの件数と、訪問済みのある都道府県を8地方のグリッドで点灯させる。
@@ -184,7 +210,7 @@ function saveWishlist() {
 function renderStampbook() {
   const box = document.getElementById("stampbook");
   if (!wishlistOnly) { box.hidden = true; return; }
-  const visitedSpots = SPOTS.filter((s) => wishlist[s.id]?.visited);
+  const visitedSpots = SPOTS.filter((s) => visitedIds[s.id]);
   const visitedPrefs = new Set(visitedSpots.map((s) => s.prefecture));
   box.hidden = false;
   box.innerHTML = "";
@@ -209,7 +235,7 @@ function renderStampbook() {
   });
 }
 function ensureEntry(id) {
-  if (!wishlist[id]) wishlist[id] = { added: today(), visited: false, memo: "" };
+  if (!wishlist[id]) wishlist[id] = { added: today(), memo: "" };
   return wishlist[id];
 }
 
@@ -524,7 +550,7 @@ document.getElementById("clear-filters").addEventListener("click", () => {
 
 // ---- 書き出し / 読み込み ----
 document.getElementById("export-btn").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ version: 2, wishlist }, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ version: 3, wishlist, visited: visitedIds }, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = t("exportFilename");
@@ -544,22 +570,27 @@ importFile.addEventListener("change", () => {
     }
     const entries = data.wishlist || data; // 素のオブジェクトも受け付ける
     const imported = {};
-    let count = 0;
+    const importedVisited = {};
     for (const [id, entry] of Object.entries(entries)) {
       if (!spotById[id] || !entry || typeof entry !== "object") continue; // typeof null も "object" なので !entry が必要
       imported[id] = {
         added: entry.added || today(),
-        visited: !!entry.visited,
         memo: String(entry.memo || ""),
       };
-      count++;
+      if (entry.visited) importedVisited[id] = true; // 旧形式(version 2)はエントリ内に visited を持つ
     }
+    for (const id of Object.keys(data.visited || {})) {
+      if (spotById[id] && data.visited[id]) importedVisited[id] = true;
+    }
+    const count = new Set([...Object.keys(imported), ...Object.keys(importedVisited)]).size;
     if (count === 0) {
       alert(t("importNone"));
       return;
     }
     wishlist = imported;
+    visitedIds = importedVisited;
     saveWishlist();
+    saveVisited();
     applyFilters();
     alert(t("importDone", { n: count }));
   });
@@ -572,8 +603,9 @@ function applyFilters() {
     if (selectedRegion !== "" && spot.region !== selectedRegion) return false;
     if (selectedPrefecture !== "" && spot.prefecture !== selectedPrefecture) return false;
     if (selectedCategories.size > 0 && ![...selectedCategories].every((c) => spot.categories.includes(c))) return false;
-    if (wishlistOnly && !wishlist[spot.id]) return false;
-    if (visitedOnly && !wishlist[spot.id]?.visited) return false;
+    // 「訪問済みのみ」はリスト未登録の訪問済みスポットも出す(朱印帳の件数と一致させる)
+    if (wishlistOnly && !visitedOnly && !wishlist[spot.id]) return false;
+    if (visitedOnly && !visitedIds[spot.id]) return false;
     if (searchText !== "") {
       // 表示中の言語の訳語でも検索できるよう、原文+訳文を対象にする
       let haystack = spot.name + spot.description + spot.prefecture;
@@ -586,7 +618,7 @@ function applyFilters() {
 
   if (wishlistOnly && sortMode === "added") {
     filtered = [...filtered].sort((a, b) =>
-      (wishlist[a.id].added + a.name).localeCompare(wishlist[b.id].added + b.name));
+      ((wishlist[a.id]?.added || "") + a.name).localeCompare((wishlist[b.id]?.added || "") + b.name));
   } // 地方順はデータの並び(地方ごと)のまま
 
   cardsEl.innerHTML = "";
@@ -635,7 +667,7 @@ function buildCard(spot) {
   });
   photoBox.appendChild(starBtn);
 
-  if (wishlist[spot.id]?.visited) {
+  if (visitedIds[spot.id]) {
     const stamp = document.createElement("span");
     stamp.className = "visited-stamp";
     stamp.textContent = "訪";
@@ -717,7 +749,7 @@ function buildMapLink(spot) {
 function toggleStar(id) {
   const entry = wishlist[id];
   if (entry) {
-    if ((entry.memo || entry.visited) && !confirm(t("confirmRemove"))) return;
+    if (entry.memo && !confirm(t("confirmRemove"))) return;
     delete wishlist[id];
   } else {
     ensureEntry(id);
@@ -824,8 +856,8 @@ function refreshDialogButtons() {
   const entry = wishlist[dialogSpotId];
   dialogStar.textContent = entry ? t("starAdded") : t("starAdd");
   dialogStar.classList.toggle("on", !!entry);
-  dialogVisited.textContent = entry?.visited ? t("visitedYes") : t("visitedNo");
-  dialogVisited.classList.toggle("on", !!entry?.visited);
+  dialogVisited.textContent = visitedIds[dialogSpotId] ? t("visitedYes") : t("visitedNo");
+  dialogVisited.classList.toggle("on", !!visitedIds[dialogSpotId]);
 }
 
 // モーダル内の変更は閉じるときにまとめて一覧へ反映する(毎回103枚を再描画しない)
@@ -843,9 +875,10 @@ document.getElementById("dialog-hotel").addEventListener("click", () => {
   if (spot) track("hotel_search_click", { spot_name: spot.name }); // 収益導線のクリック計測
 });
 dialogVisited.addEventListener("click", () => {
-  const entry = ensureEntry(dialogSpotId); // 訪問チェックでリストにも追加
-  entry.visited = !entry.visited;
-  saveWishlist();
+  // 訪問記録は行きたいリストとは独立(リストには追加しない)
+  if (visitedIds[dialogSpotId]) delete visitedIds[dialogSpotId];
+  else visitedIds[dialogSpotId] = true;
+  saveVisited();
   refreshDialogButtons();
   cardsStale = true;
 });

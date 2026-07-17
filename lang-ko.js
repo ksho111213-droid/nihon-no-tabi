@@ -1,7 +1,7 @@
 // 한국어の翻訳辞書。キーが無い項目は日本語(原本)にフォールバックする。
 const LANG_KO = {
   ui: {
-    docTitle: "일본의 여행 — 일본 국내 여행 추천 명소",
+    docTitle: "Tabisome(다비소메) — 일본 국내 여행 추천 명소",
     eyebrow: "일본을 다시 발견하다.",
     heroLead: "47개 도도부현 전체에서 엄선한 {spots}곳의 명소와 {courses}개의 추천 일정. 마음에 드는 곳은 ⭐ 로 위시리스트에 담고, 다녀오면 도장을 찍어 보세요.",
     unitSpots: "{n}",
@@ -49,11 +49,11 @@ const LANG_KO = {
     daysUnit: "{n}일",
     dayLabel: "{n}일차",
     backToCourses: "← 일정 목록으로",
-    confirmRemove: "메모와 방문 기록도 함께 삭제됩니다. 위시리스트에서 제외할까요?",
+    confirmRemove: "메모도 함께 삭제됩니다. 위시리스트에서 제외할까요?",
     importError: "파일을 읽을 수 없습니다. 이 사이트에서 내보낸 JSON 파일을 선택해 주세요.",
     importNone: "유효한 명소를 찾지 못했습니다.",
     importDone: "{n}곳을 가져왔습니다.",
-    exportFilename: "일본의여행-위시리스트.json",
+    exportFilename: "Tabisome-위시리스트.json",
     photoCredit: "사진: {a} ({l}) / {s}",
     feedbackLink: "📝 의견 보내기",
     footerText: "47개 도도부현 전체에서 엄선한 {n}곳의 명소와 추천 일정 가이드. 사진은 Wikimedia Commons의 것을 사용하며, 각 사진에 출처를 표기합니다. 사이트 이용 현황 파악을 위해 Google Analytics를 사용합니다.",
