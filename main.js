@@ -317,10 +317,18 @@ function creditLink(href, text) {
 function mapUrl(spot) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(spot.mapQuery);
 }
-// 宿検索リンク。アフィリエイト対応する際はこの関数の返すURLを差し替えるだけでよい
-// (楽天トラベルはキーワード検索のGET URLが無いため、当面は Google のホテル検索)
+// 宿検索リンク。config.js の楽天アフィリエイトID が設定されていれば楽天トラベル検索(アフィリエイト)、
+// 未設定なら従来どおり Google のホテル検索へフォールバックする
 function hotelSearchUrl(spot) {
+  if (typeof rakutenTravelSearch === "function") {
+    const rakuten = rakutenTravelSearch(spot.prefecture + " " + spot.name);
+    if (rakuten) return rakuten;
+  }
   return "https://www.google.com/travel/search?q=" + encodeURIComponent(spot.mapQuery + " ホテル");
+}
+// 楽天アフィリエイトが有効か(=宿リンクがアフィリエイトリンクか)。開示表示の出し分けに使う
+function affiliateActive() {
+  return typeof RAKUTEN_AFFILIATE_ID !== "undefined" && !!RAKUTEN_AFFILIATE_ID;
 }
 // 「無料」と扱う fee の形はここだけで判定する(免責文の出し分けも同じ判定を使う)
 function isFreeFee(spot) {
@@ -812,6 +820,7 @@ function openSpot(id) {
   document.getElementById("fee-disclaimer").hidden = !feeText || isFreeFee(spot);
   document.getElementById("dialog-map").href = mapUrl(spot);
   document.getElementById("dialog-hotel").href = hotelSearchUrl(spot);
+  document.getElementById("dialog-affiliate-note").hidden = !affiliateActive();
   const shareBox = document.getElementById("dialog-share");
   shareBox.innerHTML = "";
   shareBox.appendChild(buildShareRow(shareUrl("#spot/" + encodeURIComponent(id)), spotText(spot, "name") + " — " + t("docTitle"), id));

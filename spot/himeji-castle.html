@@ -33,6 +33,32 @@ if (location.hostname.endsWith("github.io")) location.replace(
   "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Ch%C3%A2teau%20de%20Himeji02.jpg?width=1024"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "たびそめ。",
+      "item": "https://tabisome.netlify.app/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "近畿のおすすめ観光スポット",
+      "item": "https://tabisome.netlify.app/guide/area-kinki.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "姫路城",
+      "item": "https://tabisome.netlify.app/spot/himeji-castle.html"
+    }
+  ]
+}
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-FY0S8WTDPF"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -60,9 +86,12 @@ dt { font-weight: 700; color: #6f6a60; }
 dd { margin: 0; }
 .cta { display: inline-block; margin: 8px 12px 8px 0; padding: 10px 22px; border-radius: 999px; background: #d0342c; color: #fff; font-weight: 700; text-decoration: none; }
 .cta.sub { background: #fff; color: #26241f; border: 1px solid #d9d5cc; }
+.cta.rakuten { background: #bf0000; }
+.affiliate-note { color: #8a857b; font-size: 12px; margin: 6px 0 0; }
 h2 { margin: 32px 0 8px; font-size: 20px; font-weight: 900; }
 ul { padding-left: 20px; }
 footer { margin-top: 40px; font-size: 13px; color: #6f6a60; }
+footer .sister { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -87,8 +116,16 @@ footer { margin-top: 40px; font-size: 13px; color: #6f6a60; }
 <a class="cta sub" href="https://www.google.com/maps/search/?api=1&amp;query=%E5%A7%AB%E8%B7%AF%E5%9F%8E" target="_blank" rel="noopener">Googleマップで見る</a>
 </p>
 
+<h2>関連まとめ</h2>
+<ul>
+<li><a href="../guide/area-kinki.html">近畿のおすすめ観光スポット</a></li>
+<li><a href="../guide/cat-history.html">全国の歴史スポットまとめ</a></li>
+<li><a href="../guide/cat-zekkei.html">全国の絶景スポットまとめ</a></li>
+</ul>
 
-<footer>たびそめ。— 全47都道府県から選んだ203の国内旅行おすすめスポット。<a href="../">すべてのスポットを見る</a></footer>
+
+<footer>たびそめ。— 全47都道府県から選んだ203の国内旅行おすすめスポット。<a href="../">すべてのスポットを見る</a>
+<div class="sister">姉妹サイト: <a href="https://wankomichi.netlify.app/" target="_blank" rel="noopener">わんこみち。— 犬とお散歩スポット</a></div></footer>
 </main>
 </body>
 </html>

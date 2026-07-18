@@ -1088,6 +1088,7 @@ button { font-family: var(--sans); }
   transition: border-color 0.2s ease-out;
 }
 .dialog-actions .hotel-link:hover { border-color: var(--accent); color: var(--accent); }
+.affiliate-note { margin: 6px 0 0; font-size: var(--text-sm, 12px); color: var(--muted, #8a857b); }
 
 /* ---- シェア行(スポット詳細・コース詳細) ---- */
 .share-row {
