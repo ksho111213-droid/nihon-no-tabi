@@ -102,6 +102,22 @@ const SPOTS = [
     nearby: ["otaru-canal"], mapQuery: "神威岬",
     photo: { file: "130823 Cape Kamui Shakotan Hokkaido Japan06s3.jpg", author: "663highland", license: "CC BY 2.5" },
   },
+  {
+    id: "goryokaku", name: "五稜郭", region: "北海道", prefecture: "北海道",
+    categories: ["歴史", "絶景"],
+    description: "幕末に築かれた日本初の西洋式星形城郭。五稜郭タワーの展望台から見下ろす五角形の堀と、春は約1600本の桜が彩る星形の眺めが見事。",
+    fee: [0, 1200], bestSeason: "4月下旬〜5月上旬", stayTime: "約2時間", access: "函館駅から市電で約20分",
+    nearby: ["hakodateyama", "hakodate-asaichi"], mapQuery: "五稜郭タワー",
+    photo: { file: "Hakodate Goryokaku Panorama 1.JPG", author: "京浜にけ", license: "CC BY-SA 3.0" },
+  },
+  {
+    id: "mashuko", name: "摩周湖", region: "北海道", prefecture: "北海道",
+    categories: ["絶景", "自然"],
+    description: "世界屈指の透明度を誇る「霧の摩周湖」。第一展望台から見下ろす瑠璃色の湖面は、深い霧に包まれることも多く、晴れて見えれば幸運と言われる。",
+    fee: 0, bestSeason: "1〜2月", stayTime: "約1時間", access: "JR摩周駅からバスで約20分",
+    nearby: ["akanko"], mapQuery: "摩周湖第一展望台",
+    photo: { file: "Mashu-ko Lake.jpg", author: "Fe-Taq", license: "Public domain" },
+  },
   // ---- 東北 ----
   {
     id: "oirase-gorge", name: "奥入瀬渓流", region: "東北", prefecture: "青森県",
@@ -1229,8 +1245,24 @@ const SPOTS = [
     categories: ["歴史", "街歩き"],
     description: "吉田松陰と維新の志士たちを生んだ城下町。夏みかんの土塀と武家屋敷を自転車でめぐる。",
     fee: [0, 500], bestSeason: "通年", stayTime: "半日", access: "東萩駅から自転車で約10分",
-    nearby: [], mapQuery: "萩城下町",
+    nearby: ["tsuwano"], mapQuery: "萩城下町",
     photo: { file: "View in Hagi Castle Town.jpg", author: "そらみみ", license: "CC BY-SA 4.0" },
+  },
+  {
+    id: "iwami-ginzan", name: "石見銀山・大森の町並み", region: "中国", prefecture: "島根県",
+    categories: ["歴史", "街歩き"],
+    description: "火薬を使わず手掘りで採掘した銀山跡が評価された世界遺産。武家屋敷と商家が並ぶ大森の町並みを、パーク&ライドのバスで巡る。坑道跡「龍源寺間歩」の見学も。",
+    fee: [0, 500], bestSeason: "通年", stayTime: "約2時間", access: "大田市駅からバスで約30分",
+    nearby: [], mapQuery: "石見銀山 大森町並み",
+    photo: { file: "Omori Old Street 001.jpg", author: "Naokijp", license: "CC BY-SA 4.0" },
+  },
+  {
+    id: "tsuwano", name: "津和野・殿町通り", region: "中国", prefecture: "島根県",
+    categories: ["歴史", "街歩き"],
+    description: "「山陰の小京都」と称される城下町。白壁と掘割沿いを泳ぐ色とりどりの鯉、初夏に咲くハナショウブが情緒を添える殿町通りを散策したい。",
+    fee: 0, bestSeason: "5月下旬〜6月中旬", stayTime: "約2時間", access: "津和野駅から徒歩約10分",
+    nearby: ["hagi"], mapQuery: "津和野 殿町通り",
+    photo: { file: "Waterway in Tsuwano, Kanoashi, Shimane 1.jpg", author: "そらみみ", license: "CC BY-SA 4.0" },
   },
   // ---- 四国 ----
   {
@@ -1361,6 +1393,14 @@ const SPOTS = [
     fee: 0, bestSeason: "通年", stayTime: "約1時間", access: "伊野駅から車で約40分",
     nearby: [], mapQuery: "にこ淵",
     photo: { file: "Nikobuti03.jpg", author: "Dokudami", license: "CC BY-SA 4.0" },
+  },
+  {
+    id: "kankakei", name: "寒霞渓", region: "四国", prefecture: "香川県",
+    categories: ["絶景", "自然"],
+    description: "日本三大渓谷美のひとつに数えられる小豆島のシンボル。ロープウェイで結ぶ山頂から、空・海・渓谷を一度に見渡すパノラマと県下随一の紅葉が広がる。",
+    fee: [1500, 2700], bestSeason: "11月", stayTime: "約2時間", access: "土庄港から車・バスで約30分",
+    nearby: [], mapQuery: "寒霞渓ロープウェイ",
+    photo: { file: "201211Kankakei Shodoshima Kagawa pref Japan01s3.jpg", author: "663highland", license: "CC BY 2.5" },
   },
   // ---- 九州・沖縄 ----
   {
